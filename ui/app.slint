@@ -1,0 +1,155 @@
+import { Button, VerticalBox, HorizontalBox, StandardListView, ScrollView } from "std-widgets.slint";
+
+export struct Email {
+    id: int,
+    subject: string,
+    sender: string,
+    date: string,
+}
+
+export component AppWindow inherits Window {
+    title: "Neural Mail (Pure Rust)";
+    width: 1200px;
+    height: 800px;
+    background: #1a1a1a;
+
+    callback fetch_emails();
+    callback summarize_email(string);
+    
+    in property <[Email]> emails: [];
+    in property <string> active_email_subject: "Select an email";
+    in property <string> active_email_sender: "";
+    in property <string> active_email_body: "Email content will appear here...";
+    in property <string> ai_summary: "";
+    in property <bool> loading: false;
+
+    HorizontalBox {
+        spacing: 0;
+        padding: 0;
+
+        // Sidebar
+        VerticalBox {
+            width: 200px;
+            background: #252525;
+            padding: 20px;
+            alignment: start;
+            
+            Text {
+                text: "NEURAL MAIL";
+                font-size: 16px;
+                font-weight: 800;
+                color: #ffffff;
+                horizontal-alignment: center;
+            }
+            
+            Rectangle { height: 20px; }
+            
+            Text { text: "Inbox"; color: #007aff; font-weight: 600; }
+            Text { text: "Sent"; color: #888888; }
+            Text { text: "Drafts"; color: #888888; }
+            Text { text: "Trash"; color: #888888; }
+            
+            Rectangle { vertical-stretch: 1; }
+            
+            Button {
+                text: "Add Account";
+            }
+        }
+
+        // Email List
+        VerticalBox {
+            width: 350px;
+            background: #1e1e1e;
+            padding: 0;
+            
+            ScrollView {
+                VerticalBox {
+                    alignment: start;
+                    for email in emails : Rectangle {
+                        height: 70px;
+                        background: active_email_subject == email.subject ? #2c2c2c : #1e1e1e;
+                        border-width: 1px;
+                        border-color: #2c2c2c;
+                        
+                        TouchArea {
+                            clicked => {
+                                active_email_subject = email.subject;
+                                active_email_sender = email.sender;
+                                ai_summary = "";
+                            }
+                        }
+                        
+                        VerticalBox {
+                            padding: 10px;
+                            Text {
+                                text: email.subject;
+                                color: #ffffff;
+                                font-weight: 600;
+                            }
+                            Text {
+                                text: email.sender;
+                                color: #888888;
+                                font-size: 12px;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Detail View
+        VerticalBox {
+            padding: 40px;
+            alignment: start;
+            
+            Text {
+                text: active_email_subject;
+                font-size: 24px;
+                font-weight: 700;
+                color: #ffffff;
+            }
+            Text {
+                text: "From: " + active_email_sender;
+                color: #007aff;
+                font-size: 14px;
+            }
+            
+            Rectangle { height: 20px; }
+            
+            Button {
+                text: loading ? "Neural Thinking..." : "✦ Summarize with AI";
+                primary: true;
+                enabled: !loading;
+                clicked => {
+                    fetch-emails();
+                    summarize-email(active_email_body);
+                }
+            }
+            
+            if (ai_summary != "") : VerticalBox {
+                padding: 15px;
+                Rectangle {
+                    background: #007aff22;
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: #007aff44;
+                    VerticalBox {
+                        Text { text: "AI SUMMARY"; color: #007aff; font-weight: 800; font-size: 10px; }
+                        Text { text: ai_summary; color: #ffffff; wrap: word; }
+                    }
+                }
+            }
+            
+            Rectangle { height: 20px; }
+            
+            ScrollView {
+                Text {
+                    text: active_email_body;
+                    color: #d1d1d1;
+                    font-size: 16px;
+                    wrap: word;
+                }
+            }
+        }
+    }
+}
