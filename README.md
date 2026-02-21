@@ -2,7 +2,8 @@
 
 A high-performance, privacy-first email client built with Rust and Slint, featuring deep local AI integration.
 
-![Neural Mail Demo](Neural_Client_Demo.png)
+<img width="4096" height="2522" alt="image" src="https://github.com/user-attachments/assets/4a4e1caa-1cde-44f0-b1ac-cc6669469c3e" />
+
 
 ## Key Features
 
