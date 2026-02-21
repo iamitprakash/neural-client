@@ -72,7 +72,7 @@ pub async fn chat_with_emails(question: &str, emails_context: &str) -> Result<St
         model: "llama3.1:latest".to_string(),
         prompt: format!("You are an AI assistant helping with an email inbox. Using the following emails context, answer the user's question.\n\nContext:\n{}\n\nQuestion: {}", emails_context, question),
         stream: false,
-        options: Some(OllamaOptions { num_ctx: 32768 }),
+        options: Some(OllamaOptions { num_ctx: 8192 }), // Optimized context window
     }).await
 }
 

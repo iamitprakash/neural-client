@@ -295,10 +295,11 @@ fn main() -> Result<(), slint::PlatformError> {
         rt_handle_chat.spawn(async move {
             let mut context_str = String::new();
             if let Ok(emails) = db::get_all_emails() {
-                for e in emails.iter().take(100) {
+                for e in emails.iter().take(20) {
                     let s_sender = sanitize_for_prompt(&e.sender);
                     let s_subject = sanitize_for_prompt(&e.subject);
-                    let s_body = sanitize_for_prompt(&e.body);
+                    let body_truncated = if e.body.len() > 400 { format!("{}...", &e.body[..400]) } else { e.body.clone() };
+                    let s_body = sanitize_for_prompt(&body_truncated);
                     context_str.push_str(&format!("From: {}, Subject: {}\nBody: {}\n\n", s_sender, s_subject, s_body));
                 }
             } else {
