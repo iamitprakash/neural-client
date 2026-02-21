@@ -1,95 +1,705 @@
-import { Button, VerticalBox, HorizontalBox, StandardListView, ScrollView } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, StandardListView, ScrollView, LineEdit, CheckBox, Palette } from "std-widgets.slint";
 
 export struct Email {
     id: int,
     subject: string,
     sender: string,
     date: string,
+    body: string,
+    has_attachment: bool,
+}
+
+export struct ChatMessage {
+    is_user: bool,
+    text: string,
 }
 
 export component AppWindow inherits Window {
     title: "Neural Mail (Pure Rust)";
-    width: 1200px;
-    height: 800px;
+    preferred-width: 1500px;
+    preferred-height: 800px;
     background: #1a1a1a;
 
     callback fetch_emails();
     callback summarize_email(string);
+    callback save_account(string, string, string, string, bool);
     
     in property <[Email]> emails: [];
-    in property <string> active_email_subject: "Select an email";
-    in property <string> active_email_sender: "";
-    in property <string> active_email_body: "Email content will appear here...";
-    in property <string> ai_summary: "";
+    in-out property <string> active_email_subject: "Select an email";
+    in-out property <string> active_email_sender: "";
+    in-out property <string> active_email_body: "Select an email to view its contents.";
+    in-out property <string> status_message: "";
     in property <bool> loading: false;
+    in-out property <bool> show_account_dialog: false;
+    in-out property <string> active_tab: "inbox"; // "inbox" or "chat"
+    in-out property <string> chat_input: "";
+    in property <[ChatMessage]> chat_history: [];
 
-    HorizontalBox {
-        spacing: 0;
-        padding: 0;
+    callback send_chat_message(string);
+    
+    // Contextual Email Chat
+    in-out property <bool> show_email_chat_popup: false;
+    in-out property <[ChatMessage]> email_chat_history: [];
+    in-out property <string> email_chat_input: "";
+    in-out property <length> sidebar_width: 570px;
+    callback send_email_chat_message(string);
+    callback save_sidebar_width(length);
+    in-out property <string> new_email_address: "";
+    in-out property <string> new_imap_host: "imap.gmail.com";
+    in-out property <string> new_imap_port: "993";
+    in-out property <string> new_password: "";
+    in-out property <bool> is_demo_mode: false;
+    
+    // Theming System
+    in-out property <string> theme_mode: "system"; // "light", "dark", or "system"
+    in property <bool> is_dark: theme_mode == "dark" || (theme_mode == "system" && Palette.color-scheme == ColorScheme.dark);
+    callback save_theme_mode(string);
+    
+    in property <bool> has_accounts: false;
 
-        // Sidebar
-        VerticalBox {
-            width: 200px;
-            background: #252525;
-            padding: 20px;
-            alignment: start;
-            
-            Text {
-                text: "NEURAL MAIL";
-                font-size: 16px;
-                font-weight: 800;
-                color: #ffffff;
-                horizontal-alignment: center;
-            }
-            
-            Rectangle { height: 20px; }
-            
-            Text { text: "Inbox"; color: #007aff; font-weight: 600; }
-            Text { text: "Sent"; color: #888888; }
-            Text { text: "Drafts"; color: #888888; }
-            Text { text: "Trash"; color: #888888; }
-            
-            Rectangle { vertical-stretch: 1; }
-            
-            Button {
-                text: "Add Account";
-            }
-        }
-
-        // Email List
-        VerticalBox {
-            width: 350px;
-            background: #1e1e1e;
+    // Main Layout Area
+    Rectangle {
+        HorizontalBox {
+            spacing: 0;
             padding: 0;
-            
-            ScrollView {
+            visible: true; // Always visible now that login is bypassed
+
+            // Sidebar
+            Rectangle {
+                width: 200px;
+                background: #252525;
                 VerticalBox {
+                    padding: 20px;
                     alignment: start;
-                    for email in emails : Rectangle {
-                        height: 70px;
-                        background: active_email_subject == email.subject ? #2c2c2c : #1e1e1e;
-                        border-width: 1px;
-                        border-color: #2c2c2c;
+                    
+                    Text {
+                        text: "NEURAL MAIL";
+                        font-size: 16px;
+                        font-weight: 800;
+                        color: #ffffff;
+                        horizontal-alignment: center;
+                    }
+                    
+                    Rectangle { height: 20px; }
+                    
+                    TouchArea {
+                        clicked => { active_tab = "inbox"; }
+                        Text { text: "Inbox"; color: active_tab == "inbox" ? #007aff : #888888; font-weight: active_tab == "inbox" ? 600 : 400; }
+                    }
+                    Rectangle { height: 10px; }
+                    TouchArea {
+                        clicked => { active_tab = "chat"; }
+                        Text { text: "AI Chat"; color: active_tab == "chat" ? #007aff : #888888; font-weight: active_tab == "chat" ? 600 : 400; }
+                    }
+                    
+                    Rectangle { height: 20px; }
+                    Text { text: "Sent"; color: #888888; }
+                    Text { text: "Drafts"; color: #888888; }
+                    Text { text: "Trash"; color: #888888; }
+                    
+                    Rectangle { height: 30px; }
+                    
+                    Text { 
+                        text: status_message; 
+                        color: #ff3b30; 
+                        font-size: 11px; 
+                        wrap: word-wrap;
+                    }
+                    
+                    Rectangle { vertical-stretch: 1; }
+                    
+                    // Theme Switcher
+                    Rectangle {
+                        height: 40px;
+                        background: is_dark ? #333333 : #e1dfdd;
+                        border-radius: 20px;
                         
-                        TouchArea {
-                            clicked => {
-                                active_email_subject = email.subject;
-                                active_email_sender = email.sender;
-                                ai_summary = "";
+                        HorizontalBox {
+                            alignment: center;
+                            spacing: 15px;
+                            padding: 0;
+                            
+                            Rectangle {
+                                width: 30px;
+                                height: 30px;
+                                border-radius: 15px;
+                                background: theme_mode == "light" ? (is_dark ? #555555 : #ffffff) : transparent;
+                                Text {
+                                    text: "☀️";
+                                    font-size: 14px;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                                TouchArea { clicked => { theme_mode = "light"; save_theme_mode("light"); } }
+                            }
+                            
+                            Rectangle {
+                                width: 30px;
+                                height: 30px;
+                                border-radius: 15px;
+                                background: theme_mode == "dark" ? (is_dark ? #555555 : #ffffff) : transparent;
+                                Text {
+                                    text: "🌙";
+                                    font-size: 14px;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                                TouchArea { clicked => { theme_mode = "dark"; save_theme_mode("dark"); } }
+                            }
+                            
+                            Rectangle {
+                                width: 30px;
+                                height: 30px;
+                                border-radius: 15px;
+                                background: theme_mode == "system" ? (is_dark ? #555555 : #ffffff) : transparent;
+                                Text {
+                                    text: "💻";
+                                    font-size: 14px;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                                TouchArea { clicked => { theme_mode = "system"; save_theme_mode("system"); } }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Inbox View
+            if (active_tab == "inbox") : HorizontalBox {
+                spacing: 0;
+                padding: 0;
+                
+                // Email List (Classic Layout)
+                Rectangle {
+                    width: 350px;
+                    background: #f3f2f1; // Outlook light grey background
+                    border-width: 1px;
+                    border-color: #e1dfdd;
+                    
+                    VerticalBox {
+                        padding: 0;
+                        ScrollView {
+                            VerticalBox {
+                                alignment: start;
+                                spacing: 0;
+                                for email in emails : Rectangle {
+                                    height: 75px;
+                                    background: active_email_subject == email.subject ? #ffffff : #f3f2f1;
+                                    
+                                    // Subtle left border for active item
+                                    Rectangle {
+                                        width: 3px;
+                                        height: 100%;
+                                        x: 0;
+                                        background: active_email_subject == email.subject ? #0078d4 : transparent; // Outlook blue
+                                    }
+                                    
+                                    TouchArea {
+                                        clicked => {
+                                            active_email_subject = email.subject;
+                                            active_email_sender = email.sender;
+                                            active_email_body = email.body;
+                                            email_chat_history = []; // Clear context on switch
+                                        }
+                                    }
+                                    
+                                    VerticalBox {
+                                        padding-left: 15px;
+                                        padding-top: 10px;
+                                        padding-bottom: 10px;
+                                        Text {
+                                            text: email.sender;
+                                            color: #323130;
+                                            font-weight: 600;
+                                            font-size: 14px;
+                                        }
+                                        Text {
+                                            text: email.subject + (email.has_attachment ? " 📎" : "");
+                                            color: active_email_subject == email.subject ? #0078d4 : #605e5c;
+                                            font-weight: active_email_subject == email.subject ? 600 : 400;
+                                            font-size: 13px;
+                                        }
+                                    }
+                                    
+                                    // Bottom separator line
+                                    Rectangle {
+                                        y: parent.height - 1px;
+                                        height: 1px;
+                                        background: #e1dfdd;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Detail View (Outlook Reading Pane Style)
+                Rectangle {
+                    background: #ffffff;
+                    horizontal-stretch: 1;
+                    
+                    VerticalBox {
+                        padding: 0;
+                        spacing: 0;
+                        
+                        // Header
+                        Rectangle {
+                            background: #ffffff;
+                            border-width: 1px;
+                            border-color: #e1dfdd;
+                            height: 100px;
+                            
+                            HorizontalBox {
+                                padding: 25px;
+                                alignment: space-between;
+                                
+                                VerticalBox {
+                                    spacing: 5px;
+                                    Text {
+                                        text: active_email_subject;
+                                        font-size: 22px;
+                                        font-weight: 600;
+                                        color: #323130; // Outlook dark gray text
+                                    }
+                                    Text {
+                                        text: active_email_sender;
+                                        color: #605e5c;
+                                        font-size: 14px;
+                                    }
+                                }
+                                
+                                // Copilot-like interaction button
+                                if active_email_sender != "" : Rectangle {
+                                    width: 160px;
+                                    height: 40px;
+                                    border-radius: 4px;
+                                    background: #f3f2f1;
+                                    border-width: 1px;
+                                    border-color: #e1dfdd;
+                                    
+                                    HorizontalBox {
+                                        alignment: center;
+                                        spacing: 8px;
+                                        Text { text: "✦"; color: #0078d4; font-size: 16px; }
+                                        Text { text: "Ask Tejas"; color: #323130; font-size: 13px; font-weight: 600; }
+                                    }
+                                    
+                                    TouchArea {
+                                        clicked => { show_email_chat_popup = !show_email_chat_popup; }
+                                    }
+                                }
                             }
                         }
                         
-                        VerticalBox {
-                            padding: 10px;
-                            Text {
-                                text: email.subject;
-                                color: #ffffff;
-                                font-weight: 600;
+                        // Body Area
+                        Rectangle {
+                            background: #ffffff;
+                            vertical-stretch: 1;
+                            
+                            ScrollView {
+                                VerticalBox {
+                                    padding: 40px;
+                                    Text {
+                                        text: active_email_body;
+                                        color: #323130;
+                                        font-size: 15px;
+                                        wrap: word-wrap;
+                                    }
+                                }
                             }
-                            Text {
-                                text: email.sender;
-                                color: #888888;
-                                font-size: 12px;
+                        }
+                    }
+                }
+
+                // Tejas Slide-Out Sidebar (3rd Column)
+                Rectangle {
+                    width: show_email_chat_popup ? sidebar_width : 0px;
+                    clip: true;
+                    animate width { duration: 250ms; easing: ease-in-out; }
+                    background: #ffffff;
+                    
+                    // Left border separator when open
+                    Rectangle {
+                        width: 1px;
+                        height: 100%;
+                        x: 0;
+                        background: #e1dfdd;
+                    }
+                    
+                    // Drag handle for resizing
+                    TouchArea {
+                        width: 8px;
+                        height: 100%;
+                        x: -4px;
+                        z: 10;
+                        mouse-cursor: ew-resize;
+                        
+                        moved => {
+                            if (self.pressed) {
+                                let new-width = sidebar_width - self.mouse-x;
+                                if (new-width < 250px) {
+                                    sidebar_width = 250px;
+                                } else if (new-width > 800px) {
+                                    sidebar_width = 800px;
+                                } else {
+                                    sidebar_width = new-width;
+                                }
+                            }
+                        }
+                        
+                        pointer-event(event) => {
+                            if (event.button == PointerEventButton.left && event.kind == PointerEventKind.up) {
+                                save_sidebar_width(sidebar_width);
+                            }
+                        }
+                    }
+                    
+                    VerticalBox {
+                        padding: 0;
+                        spacing: 0;
+                        x: 1px; // account for border
+                        width: parent.width - 1px;
+                        
+                        // Header
+                        Rectangle {
+                            background: #f3f2f1; // Light header
+                            height: 60px;
+                            
+                            // Bottom border for header
+                            Rectangle {
+                                y: parent.height - 1px;
+                                height: 1px;
+                                background: #e1dfdd;
+                            }
+                            
+                            HorizontalBox {
+                                padding-left: 20px;
+                                padding-right: 20px;
+                                alignment: space-between;
+                                
+                                VerticalBox {
+                                    alignment: center;
+                                    horizontal-stretch: 1; // crucial to prevent pushing width bounds
+                                    Text {
+                                        text: "Tejas: " + active_email_subject;
+                                        font-size: 15px;
+                                        font-weight: 600;
+                                        color: #323130;
+                                        overflow: elide;
+                                    }
+                                    Text {
+                                        text: "Draft reply, summarize, etc.";
+                                        color: #605e5c;
+                                        font-size: 12px;
+                                        overflow: elide;
+                                    }
+                                }
+                                
+                                // Close Button
+                                Rectangle {
+                                    width: 80px;
+                                    height: 28px;
+                                    border-radius: 4px;
+                                    background: #e1dfdd;
+                                    TouchArea { clicked => { show_email_chat_popup = false; } }
+                                    HorizontalBox {
+                                        alignment: center;
+                                        padding: 0;
+                                        spacing: 6px;
+                                        Text { text: "✕"; color: #323130; font-size: 12px; }
+                                        Text { text: "Close"; color: #323130; font-size: 13px; font-weight: 600; }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Chat History
+                        Rectangle {
+                            background: #ffffff;
+                            vertical-stretch: 1;
+                            
+                            ScrollView {
+                                VerticalBox {
+                                    padding: 20px;
+                                    spacing: 12px;
+                                    alignment: start;
+                                    
+                                    for msg in email_chat_history : HorizontalBox {
+                                        alignment: msg.is_user ? end : start;
+                                        
+                                        Rectangle {
+                                            // User uses Outlook Blue, AI uses Light Gray
+                                            background: msg.is_user ? #0078d4 : #f3f2f1;
+                                            border-radius: 8px;
+                                            border-top-right-radius: msg.is_user ? 0 : 8px;
+                                            border-top-left-radius: msg.is_user ? 8px : 0;
+                                            
+                                            // Subtle border for AI messages
+                                            border-width: msg.is_user ? 0px : 1px;
+                                            border-color: #e1dfdd;
+                                            
+                                            HorizontalBox {
+                                                padding-left: 12px;
+                                                padding-right: 12px;
+                                                padding-top: 10px;
+                                                padding-bottom: 10px;
+                                                
+                                                TextInput {
+                                                    text: msg.text;
+                                                    color: msg.is_user ? #ffffff : #323130;
+                                                    font-size: 14px;
+                                                    wrap: word-wrap;
+                                                    read-only: true;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Input Area
+                        Rectangle {
+                            background: #ffffff;
+                            height: 62px;
+                            
+                            // Top border for input area
+                            Rectangle {
+                                y: 0;
+                                height: 1px;
+                                background: #e1dfdd;
+                            }
+                            
+                            HorizontalBox {
+                                padding-left: 15px;
+                                padding-right: 15px;
+                                spacing: 12px;
+                                
+                                Rectangle {
+                                    background: #ffffff;
+                                    border-radius: 20px;
+                                    border-width: 1px;
+                                    border-color: input-area.has-focus ? #0078d4 : #605e5c;
+                                    horizontal-stretch: 1;
+                                    height: 40px;
+                                    
+                                    HorizontalBox {
+                                        padding: 0;
+                                        padding-left: 15px;
+                                        padding-right: 15px;
+                                        
+                                        input-area := TextInput {
+                                            vertical-alignment: center;
+                                            text <=> email_chat_input;
+                                            font-size: 14px;
+                                            color: #323130;
+                                            single-line: true;
+                                            
+                                            accepted => {
+                                                if (email_chat_input != "") {
+                                                    send_email_chat_message(email_chat_input);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    if (email_chat_input == "") : Text {
+                                        x: 15px;
+                                        y: (parent.height - self.height) / 2;
+                                        text: "Message Tejas...";
+                                        color: #a19f9d;
+                                        font-size: 14px;
+                                    }
+                                }
+                                
+                                Rectangle {
+                                    width: 40px;
+                                    height: 40px;
+                                    border-radius: 20px;
+                                    background: (email_chat_input != "" && !loading) ? #0078d4 : #f3f2f1;
+                                    
+                                    TouchArea {
+                                        enabled: !loading && email_chat_input != "";
+                                        clicked => {
+                                            send_email_chat_message(email_chat_input);
+                                        }
+                                    }
+                                    
+                                    Text {
+                                        text: loading ? "⏳" : "➤"; 
+                                        color: (email_chat_input != "" && !loading) ? #ffffff : #a19f9d;
+                                        font-size: 18px;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Chat View
+            if (active_tab == "chat") : Rectangle {
+                background: #ffffff;
+                horizontal-stretch: 1;
+                
+                VerticalBox {
+                    padding: 0;
+                    spacing: 0;
+                    
+                    // Header Area
+                    Rectangle {
+                        background: #f3f2f1;
+                        height: 60px;
+                        
+                        // Bottom border for header
+                        Rectangle {
+                            y: parent.height - 1px;
+                            height: 1px;
+                            background: #e1dfdd;
+                        }
+                        
+                        HorizontalBox {
+                            padding-left: 20px;
+                            padding-right: 20px;
+                            alignment: start;
+                            
+                            VerticalBox {
+                                alignment: center;
+                                Text {
+                                    text: "All Emails Assistant";
+                                    font-size: 16px;
+                                    font-weight: 600;
+                                    color: #323130;
+                                }
+                                Text {
+                                    text: "Our AI processes all 1000 emails instantly.";
+                                    color: #605e5c;
+                                    font-size: 13px;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Chat History Area
+                    Rectangle {
+                        background: #ffffff;
+                        vertical-stretch: 1;
+                        
+                        ScrollView {
+                            VerticalBox {
+                                padding: 20px;
+                                spacing: 12px;
+                                alignment: start;
+                                
+                                for msg in chat_history : HorizontalBox {
+                                    alignment: msg.is_user ? end : start;
+                                    
+                                    Rectangle {
+                                        background: msg.is_user ? #0078d4 : #f3f2f1;
+                                        border-radius: 8px;
+                                        border-top-right-radius: msg.is_user ? 0 : 8px;
+                                        border-top-left-radius: msg.is_user ? 8px : 0;
+                                        
+                                        border-width: msg.is_user ? 0px : 1px;
+                                        border-color: #e1dfdd;
+                                        
+                                        HorizontalBox {
+                                            padding-left: 12px;
+                                            padding-right: 12px;
+                                            padding-top: 10px;
+                                            padding-bottom: 10px;
+                                            
+                                            TextInput {
+                                                text: msg.text;
+                                                color: msg.is_user ? #ffffff : #323130;
+                                                font-size: 15px;
+                                                wrap: word-wrap;
+                                                read-only: true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Input Area
+                    Rectangle {
+                        background: #ffffff;
+                        height: 62px;
+                        
+                        // Top border for input area
+                        Rectangle {
+                            y: 0;
+                            height: 1px;
+                            background: #e1dfdd;
+                        }
+                        
+                        HorizontalBox {
+                            padding-left: 15px;
+                            padding-right: 15px;
+                            spacing: 12px;
+                            
+                            Rectangle {
+                                background: #ffffff;
+                                border-radius: 20px;
+                                border-width: 1px;
+                                border-color: all-emails-input-area.has-focus ? #0078d4 : #605e5c;
+                                horizontal-stretch: 1;
+                                height: 40px;
+                                
+                                HorizontalBox {
+                                    padding: 0;
+                                    padding-left: 15px;
+                                    padding-right: 15px;
+                                    
+                                    all-emails-input-area := TextInput {
+                                        vertical-alignment: center;
+                                        text <=> chat_input;
+                                        font-size: 15px;
+                                        color: #323130;
+                                        single-line: true;
+                                        
+                                        accepted => {
+                                            if (chat_input != "") {
+                                                send_chat_message(chat_input);
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                if (chat_input == "") : Text {
+                                    x: 15px;
+                                    y: (parent.height - self.height) / 2;
+                                    text: "Type a question...";
+                                    color: #a19f9d;
+                                    font-size: 15px;
+                                }
+                            }
+                            
+                            Rectangle {
+                                width: 40px;
+                                height: 40px;
+                                border-radius: 20px;
+                                background: (chat_input != "" && !loading) ? #0078d4 : #f3f2f1;
+                                
+                                TouchArea {
+                                    enabled: !loading && chat_input != "";
+                                    clicked => {
+                                        send_chat_message(chat_input);
+                                    }
+                                }
+                                
+                                Text {
+                                    text: loading ? "⏳" : "➤"; 
+                                    color: (chat_input != "" && !loading) ? #ffffff : #a19f9d;
+                                    font-size: 18px;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
                             }
                         }
                     }
@@ -97,57 +707,78 @@ export component AppWindow inherits Window {
             }
         }
 
-        // Detail View
-        VerticalBox {
-            padding: 40px;
-            alignment: start;
+        // Welcome Screen removed to bypass login
+    }
+
+    // Add Account Dialog Overlay (Layered on top of main layout)
+    if show_account_dialog : Rectangle {
+        background: #00000088;
+        TouchArea { } // Eat clicks outside the dialog
+        
+        Rectangle {
+            width: 400px;
+            height: 400px;
+            background: #252525;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: #333333;
             
-            Text {
-                text: active_email_subject;
-                font-size: 24px;
-                font-weight: 700;
-                color: #ffffff;
-            }
-            Text {
-                text: "From: " + active_email_sender;
-                color: #007aff;
-                font-size: 14px;
-            }
-            
-            Rectangle { height: 20px; }
-            
-            Button {
-                text: loading ? "Neural Thinking..." : "✦ Summarize with AI";
-                primary: true;
-                enabled: !loading;
-                clicked => {
-                    fetch-emails();
-                    summarize-email(active_email_body);
-                }
-            }
-            
-            if (ai_summary != "") : VerticalBox {
-                padding: 15px;
-                Rectangle {
-                    background: #007aff22;
-                    border-radius: 8px;
-                    border-width: 1px;
-                    border-color: #007aff44;
-                    VerticalBox {
-                        Text { text: "AI SUMMARY"; color: #007aff; font-weight: 800; font-size: 10px; }
-                        Text { text: ai_summary; color: #ffffff; wrap: word; }
+            VerticalBox {
+                padding: 30px;
+                spacing: 15px;
+                alignment: start;
+                
+                Text { text: "Add New Account"; font-size: 20px; font-weight: 700; color: white; }
+                
+                VerticalBox {
+                    spacing: 5px;
+                    Text { text: "Email Address"; color: #888888; font-size: 12px; }
+                    LineEdit { 
+                        text <=> new_email_address;
+                        placeholder-text: "user@example.com";
                     }
                 }
-            }
-            
-            Rectangle { height: 20px; }
-            
-            ScrollView {
-                Text {
-                    text: active_email_body;
-                    color: #d1d1d1;
-                    font-size: 16px;
-                    wrap: word;
+                
+                VerticalBox {
+                    spacing: 5px;
+                    Text { text: "IMAP Host"; color: #888888; font-size: 12px; }
+                    LineEdit { 
+                        text <=> new_imap_host;
+                    }
+                }
+                
+                VerticalBox {
+                    spacing: 5px;
+                    Text { text: "Password"; color: #888888; font-size: 12px; }
+                    LineEdit { 
+                        text <=> new_password;
+                        input-type: password;
+                    }
+                }
+                
+                VerticalBox {
+                    spacing: 10px;
+                    CheckBox {
+                        text: "Enable Demo Mode (Use dummy data)";
+                        checked <=> is_demo_mode;
+                    }
+                }
+
+                HorizontalBox {
+                    spacing: 10px;
+                    alignment: end;
+                    Button {
+                        text: "Cancel";
+                        clicked => { show_account_dialog = false; }
+                    }
+                    Button {
+                        text: is_demo_mode ? "Start Demo" : "Save Account";
+                        primary: true;
+                        clicked => {
+                            save_account(new_email_address, new_imap_host, new_password, new_imap_port, is_demo_mode);
+                            show_account_dialog = false;
+                        }
+                    }
                 }
             }
         }
