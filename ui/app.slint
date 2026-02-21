@@ -455,28 +455,29 @@ export component AppWindow inherits Window {
                                     border-width: 1px;
                                     border-color: is_dark ? #333333 : #e1dfdd;
                                     
-                                    HorizontalBox {
-                                        padding-left: 20px; padding-right: 20px; alignment: space-between;
+                                    HorizontalLayout {
+                                        padding-left: 20px; padding-right: 20px; padding-top: 0; padding-bottom: 0; alignment: space-between;
                                         
                                         // Left side: Send button and From
-                                        HorizontalBox {
+                                        HorizontalLayout {
                                             spacing: 15px;
+                                            padding: 0;
                                             Rectangle {
-                                                width: 80px; height: 32px; background: #0078d4; border-radius: 4px;
+                                                width: 80px; height: 32px; background: #0078d4; border-radius: 4px; y: 9px;
                                                 TouchArea {
                                                     mouse-cursor: pointer;
                                                     clicked => { send_email(compose_to, compose_subject, compose_body); }
                                                 }
-                                                HorizontalBox { alignment: center; padding: 0; Text { text: "Send ➤"; color: #ffffff; font-size: 13px; font-weight: 600; vertical-alignment: center; } }
+                                                Text { text: "Send ➤"; color: #ffffff; font-size: 13px; font-weight: 600; horizontal-alignment: center; vertical-alignment: center; width: 100%; height: 100%; }
                                             }
-                                            Text { text: "From: " + active_email_sender; color: is_dark ? #ffffff : #323130; font-size: 13px; vertical-alignment: center; }
+                                            Text { y: 9px; height: 32px; text: "From: " + active_email_sender; color: is_dark ? #ffffff : #323130; font-size: 13px; vertical-alignment: center; }
                                         }
                                         
                                         // Right side: Discard (Trash)
                                         Rectangle {
-                                            width: 32px; height: 32px;
+                                            width: 32px; height: 32px; y: 9px;
                                             TouchArea { mouse-cursor: pointer; clicked => { show_compose_dialog = false; } }
-                                            Text { text: "🗑"; color: is_dark ? #bbbbbb : #605e5c; font-size: 16px; horizontal-alignment: center; vertical-alignment: center; }
+                                            Text { text: "🗑"; color: is_dark ? #bbbbbb : #605e5c; font-size: 16px; horizontal-alignment: center; vertical-alignment: center; width: 100%; height: 100%; }
                                         }
                                     }
                                 }
