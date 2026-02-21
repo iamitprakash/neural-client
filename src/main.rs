@@ -353,7 +353,7 @@ fn main() -> Result<(), slint::PlatformError> {
 
         fn is_valid_email(s: &str) -> bool {
             let trimmed = s.trim();
-            if trimmed.is_empty() { return false; } // Security: Empty emails are NOT valid
+            if trimmed.is_empty() { return true; } // Optional fields can be empty
             EmailAddress::is_valid(trimmed)
         }
 
