@@ -6,6 +6,7 @@ mod db;
 slint::include_modules!();
 
 use slint::{Model, ModelRc, VecModel};
+use chrono::Timelike;
 use std::rc::Rc;
 use tokio::runtime::Runtime;
 
@@ -171,6 +172,32 @@ fn main() -> Result<(), slint::PlatformError> {
         });
         ui.set_chat_history(ModelRc::from(Rc::new(VecModel::from(history))));
         ui.set_chat_input("".into());
+
+        // Instant Greeting Interceptor
+        let normalized = msg_clone.trim().to_lowercase();
+        let greetings = ["hi", "hello", "hey", "good morning", "good evening", "greetings", "hi!", "hello!", "hey!"];
+        
+        if greetings.contains(&normalized.as_str()) {
+            let hour = chrono::Local::now().hour();
+            let time_greeting = if hour < 12 {
+                "Good morning"
+            } else if hour < 17 {
+                "Good afternoon"
+            } else {
+                "Good evening"
+            };
+            
+            let reply = format!("Hello! {}, how may I help you today?", time_greeting);
+            
+            let mut history: Vec<ChatMessage> = ui.get_chat_history().iter().collect();
+            history.push(ChatMessage {
+                is_user: false,
+                text: reply.into(),
+            });
+            ui.set_chat_history(ModelRc::from(Rc::new(VecModel::from(history))));
+            ui.set_loading(false);
+            return;
+        }
 
         rt_handle_chat.spawn(async move {
             let mut context_str = String::new();
