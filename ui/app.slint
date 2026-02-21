@@ -249,6 +249,7 @@ export component AppWindow inherits Window {
 
             // Inbox View
             if (active_tab == "inbox") : HorizontalBox {
+                horizontal-stretch: 1;
                 spacing: 0;
                 padding: 0;
                 
@@ -720,8 +721,8 @@ export component AppWindow inherits Window {
                     VerticalBox {
                         padding: 0;
                         spacing: 0;
-                        x: 1px; // account for border
-                        width: parent.width - 1px;
+                        padding-left: 1px; // account for border
+                        // width and x removed for robustness
                         
                         // Header
                         Rectangle {
@@ -788,36 +789,35 @@ export component AppWindow inherits Window {
                                     spacing: 12px;
                                     alignment: start;
                                     
-                                    for msg in email_chat_history : HorizontalBox {
-                                        alignment: msg.is_user ? end : start;
-                                        
-                                        Rectangle {
-                                            // User uses Outlook Blue, AI uses Light Gray
-                                            background: msg.is_user ? #0078d4 : (is_dark ? #252525 : #f3f2f1);
-                                            border-radius: 8px;
-                                            border-top-right-radius: msg.is_user ? 0 : 8px;
-                                            border-top-left-radius: msg.is_user ? 8px : 0;
+                                        VerticalBox {
+                                            alignment: msg.is_user ? end : start;
+                                            padding: 0;
                                             
-                                            // Subtle border for AI messages
-                                            border-width: msg.is_user ? 0px : 1px;
-                                            border-color: is_dark ? #333333 : #e1dfdd;
-                                            
-                                            HorizontalBox {
-                                                padding-left: 12px;
-                                                padding-right: 12px;
-                                                padding-top: 10px;
-                                                padding-bottom: 10px;
+                                            Rectangle {
+                                                // User uses Outlook Blue, AI uses Light Gray
+                                                background: msg.is_user ? #0078d4 : (is_dark ? #252525 : #f3f2f1);
+                                                border-radius: 8px;
+                                                border-top-right-radius: msg.is_user ? 0 : 8px;
+                                                border-top-left-radius: msg.is_user ? 8px : 0;
                                                 
-                                                TextInput {
-                                                    text: msg.text;
-                                                    color: msg.is_user ? #ffffff : (is_dark ? #ffffff : #323130);
-                                                    font-size: 14px;
-                                                    wrap: word-wrap;
-                                                    read-only: true;
+                                                // Subtle border for AI messages
+                                                border-width: msg.is_user ? 0px : 1px;
+                                                border-color: is_dark ? #333333 : #e1dfdd;
+                                                
+                                                VerticalBox {
+                                                    padding: 10px;
+                                                    padding-left: 12px;
+                                                    padding-right: 12px;
+                                                    
+                                                    Text {
+                                                        text: msg.text;
+                                                        color: msg.is_user ? #ffffff : (is_dark ? #ffffff : #323130);
+                                                        font-size: 14px;
+                                                        wrap: word-wrap;
+                                                    }
                                                 }
                                             }
                                         }
-                                    }
                                 }
                             }
                         }
