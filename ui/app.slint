@@ -67,7 +67,7 @@ export component AppWindow inherits Window {
             // Sidebar
             Rectangle {
                 width: 200px;
-                background: #252525;
+                background: is_dark ? #252525 : #f3f2f1;
                 VerticalBox {
                     padding: 20px;
                     alignment: start;
@@ -76,18 +76,20 @@ export component AppWindow inherits Window {
                         text: "NEURAL MAIL";
                         font-size: 16px;
                         font-weight: 800;
-                        color: #ffffff;
+                        color: is_dark ? #ffffff : #323130;
                         horizontal-alignment: center;
                     }
                     
                     Rectangle { height: 20px; }
                     
                     TouchArea {
+                        mouse-cursor: pointer;
                         clicked => { active_tab = "inbox"; }
                         Text { text: "Inbox"; color: active_tab == "inbox" ? #007aff : #888888; font-weight: active_tab == "inbox" ? 600 : 400; }
                     }
                     Rectangle { height: 10px; }
                     TouchArea {
+                        mouse-cursor: pointer;
                         clicked => { active_tab = "chat"; }
                         Text { text: "AI Chat"; color: active_tab == "chat" ? #007aff : #888888; font-weight: active_tab == "chat" ? 600 : 400; }
                     }
@@ -117,7 +119,8 @@ export component AppWindow inherits Window {
                         HorizontalBox {
                             alignment: center;
                             spacing: 15px;
-                            padding: 0;
+                            padding-top: 5px;
+                            padding-bottom: 5px;
                             
                             Rectangle {
                                 width: 30px;
@@ -130,7 +133,7 @@ export component AppWindow inherits Window {
                                     horizontal-alignment: center;
                                     vertical-alignment: center;
                                 }
-                                TouchArea { clicked => { theme_mode = "light"; save_theme_mode("light"); } }
+                                TouchArea { mouse-cursor: pointer; clicked => { theme_mode = "light"; save_theme_mode("light"); } }
                             }
                             
                             Rectangle {
@@ -144,7 +147,7 @@ export component AppWindow inherits Window {
                                     horizontal-alignment: center;
                                     vertical-alignment: center;
                                 }
-                                TouchArea { clicked => { theme_mode = "dark"; save_theme_mode("dark"); } }
+                                TouchArea { mouse-cursor: pointer; clicked => { theme_mode = "dark"; save_theme_mode("dark"); } }
                             }
                             
                             Rectangle {
@@ -158,7 +161,7 @@ export component AppWindow inherits Window {
                                     horizontal-alignment: center;
                                     vertical-alignment: center;
                                 }
-                                TouchArea { clicked => { theme_mode = "system"; save_theme_mode("system"); } }
+                                TouchArea { mouse-cursor: pointer; clicked => { theme_mode = "system"; save_theme_mode("system"); } }
                             }
                         }
                     }
@@ -173,9 +176,9 @@ export component AppWindow inherits Window {
                 // Email List (Classic Layout)
                 Rectangle {
                     width: 350px;
-                    background: #f3f2f1; // Outlook light grey background
+                    background: is_dark ? #1a1a1a : #f3f2f1;
                     border-width: 1px;
-                    border-color: #e1dfdd;
+                    border-color: is_dark ? #333333 : #e1dfdd;
                     
                     VerticalBox {
                         padding: 0;
@@ -185,7 +188,7 @@ export component AppWindow inherits Window {
                                 spacing: 0;
                                 for email in emails : Rectangle {
                                     height: 75px;
-                                    background: active_email_subject == email.subject ? #ffffff : #f3f2f1;
+                                    background: active_email_subject == email.subject ? (is_dark ? #333333 : #ffffff) : (is_dark ? #1a1a1a : #f3f2f1);
                                     
                                     // Subtle left border for active item
                                     Rectangle {
@@ -196,6 +199,7 @@ export component AppWindow inherits Window {
                                     }
                                     
                                     TouchArea {
+                                        mouse-cursor: pointer;
                                         clicked => {
                                             active_email_subject = email.subject;
                                             active_email_sender = email.sender;
@@ -210,13 +214,13 @@ export component AppWindow inherits Window {
                                         padding-bottom: 10px;
                                         Text {
                                             text: email.sender;
-                                            color: #323130;
+                                            color: is_dark ? #ffffff : #323130;
                                             font-weight: 600;
                                             font-size: 14px;
                                         }
                                         Text {
                                             text: email.subject + (email.has_attachment ? " 📎" : "");
-                                            color: active_email_subject == email.subject ? #0078d4 : #605e5c;
+                                            color: active_email_subject == email.subject ? #0078d4 : (is_dark ? #bbbbbb : #605e5c);
                                             font-weight: active_email_subject == email.subject ? 600 : 400;
                                             font-size: 13px;
                                         }
@@ -226,7 +230,7 @@ export component AppWindow inherits Window {
                                     Rectangle {
                                         y: parent.height - 1px;
                                         height: 1px;
-                                        background: #e1dfdd;
+                                        background: is_dark ? #333333 : #e1dfdd;
                                     }
                                 }
                             }
@@ -236,7 +240,7 @@ export component AppWindow inherits Window {
 
                 // Detail View (Outlook Reading Pane Style)
                 Rectangle {
-                    background: #ffffff;
+                    background: is_dark ? #1a1a1a : #ffffff;
                     horizontal-stretch: 1;
                     
                     VerticalBox {
@@ -245,9 +249,9 @@ export component AppWindow inherits Window {
                         
                         // Header
                         Rectangle {
-                            background: #ffffff;
+                            background: is_dark ? #1a1a1a : #ffffff;
                             border-width: 1px;
-                            border-color: #e1dfdd;
+                            border-color: is_dark ? #333333 : #e1dfdd;
                             height: 100px;
                             
                             HorizontalBox {
@@ -260,11 +264,11 @@ export component AppWindow inherits Window {
                                         text: active_email_subject;
                                         font-size: 22px;
                                         font-weight: 600;
-                                        color: #323130; // Outlook dark gray text
+                                        color: is_dark ? #ffffff : #323130;
                                     }
                                     Text {
                                         text: active_email_sender;
-                                        color: #605e5c;
+                                        color: is_dark ? #bbbbbb : #605e5c;
                                         font-size: 14px;
                                     }
                                 }
@@ -274,18 +278,19 @@ export component AppWindow inherits Window {
                                     width: 160px;
                                     height: 40px;
                                     border-radius: 4px;
-                                    background: #f3f2f1;
+                                    background: is_dark ? #252525 : #f3f2f1;
                                     border-width: 1px;
-                                    border-color: #e1dfdd;
+                                    border-color: is_dark ? #333333 : #e1dfdd;
                                     
                                     HorizontalBox {
                                         alignment: center;
                                         spacing: 8px;
                                         Text { text: "✦"; color: #0078d4; font-size: 16px; }
-                                        Text { text: "Ask Tejas"; color: #323130; font-size: 13px; font-weight: 600; }
+                                        Text { text: "Ask Tejas"; color: is_dark ? #ffffff : #323130; font-size: 13px; font-weight: 600; }
                                     }
                                     
                                     TouchArea {
+                                        mouse-cursor: pointer;
                                         clicked => { show_email_chat_popup = !show_email_chat_popup; }
                                     }
                                 }
@@ -294,7 +299,7 @@ export component AppWindow inherits Window {
                         
                         // Body Area
                         Rectangle {
-                            background: #ffffff;
+                            background: is_dark ? #1a1a1a : #ffffff;
                             vertical-stretch: 1;
                             
                             ScrollView {
@@ -302,7 +307,7 @@ export component AppWindow inherits Window {
                                     padding: 40px;
                                     Text {
                                         text: active_email_body;
-                                        color: #323130;
+                                        color: is_dark ? #e1dfdd : #323130;
                                         font-size: 15px;
                                         wrap: word-wrap;
                                     }
@@ -317,14 +322,14 @@ export component AppWindow inherits Window {
                     width: show_email_chat_popup ? sidebar_width : 0px;
                     clip: true;
                     animate width { duration: 250ms; easing: ease-in-out; }
-                    background: #ffffff;
+                    background: is_dark ? #1a1a1a : #ffffff;
                     
                     // Left border separator when open
                     Rectangle {
                         width: 1px;
                         height: 100%;
                         x: 0;
-                        background: #e1dfdd;
+                        background: is_dark ? #333333 : #e1dfdd;
                     }
                     
                     // Drag handle for resizing
@@ -363,14 +368,14 @@ export component AppWindow inherits Window {
                         
                         // Header
                         Rectangle {
-                            background: #f3f2f1; // Light header
+                            background: is_dark ? #252525 : #f3f2f1; // Light header
                             height: 60px;
                             
                             // Bottom border for header
                             Rectangle {
                                 y: parent.height - 1px;
                                 height: 1px;
-                                background: #e1dfdd;
+                                background: is_dark ? #333333 : #e1dfdd;
                             }
                             
                             HorizontalBox {
@@ -385,12 +390,12 @@ export component AppWindow inherits Window {
                                         text: "Tejas: " + active_email_subject;
                                         font-size: 15px;
                                         font-weight: 600;
-                                        color: #323130;
+                                        color: is_dark ? #ffffff : #323130;
                                         overflow: elide;
                                     }
                                     Text {
                                         text: "Draft reply, summarize, etc.";
-                                        color: #605e5c;
+                                        color: is_dark ? #bbbbbb : #605e5c;
                                         font-size: 12px;
                                         overflow: elide;
                                     }
@@ -401,14 +406,15 @@ export component AppWindow inherits Window {
                                     width: 80px;
                                     height: 28px;
                                     border-radius: 4px;
-                                    background: #e1dfdd;
-                                    TouchArea { clicked => { show_email_chat_popup = false; } }
+                                    background: is_dark ? #333333 : #e1dfdd;
+                                    TouchArea { mouse-cursor: pointer; clicked => { show_email_chat_popup = false; } }
                                     HorizontalBox {
                                         alignment: center;
-                                        padding: 0;
+                                        padding-top: 0;
+                                        padding-bottom: 0;
                                         spacing: 6px;
-                                        Text { text: "✕"; color: #323130; font-size: 12px; }
-                                        Text { text: "Close"; color: #323130; font-size: 13px; font-weight: 600; }
+                                        Text { text: "✕"; color: is_dark ? #ffffff : #323130; font-size: 12px; vertical-alignment: center; }
+                                        Text { text: "Close"; color: is_dark ? #ffffff : #323130; font-size: 13px; font-weight: 600; vertical-alignment: center; }
                                     }
                                 }
                             }
@@ -416,7 +422,7 @@ export component AppWindow inherits Window {
                         
                         // Chat History
                         Rectangle {
-                            background: #ffffff;
+                            background: is_dark ? #1a1a1a : #ffffff;
                             vertical-stretch: 1;
                             
                             ScrollView {
@@ -430,14 +436,14 @@ export component AppWindow inherits Window {
                                         
                                         Rectangle {
                                             // User uses Outlook Blue, AI uses Light Gray
-                                            background: msg.is_user ? #0078d4 : #f3f2f1;
+                                            background: msg.is_user ? #0078d4 : (is_dark ? #252525 : #f3f2f1);
                                             border-radius: 8px;
                                             border-top-right-radius: msg.is_user ? 0 : 8px;
                                             border-top-left-radius: msg.is_user ? 8px : 0;
                                             
                                             // Subtle border for AI messages
                                             border-width: msg.is_user ? 0px : 1px;
-                                            border-color: #e1dfdd;
+                                            border-color: is_dark ? #333333 : #e1dfdd;
                                             
                                             HorizontalBox {
                                                 padding-left: 12px;
@@ -447,7 +453,7 @@ export component AppWindow inherits Window {
                                                 
                                                 TextInput {
                                                     text: msg.text;
-                                                    color: msg.is_user ? #ffffff : #323130;
+                                                    color: msg.is_user ? #ffffff : (is_dark ? #ffffff : #323130);
                                                     font-size: 14px;
                                                     wrap: word-wrap;
                                                     read-only: true;
@@ -461,14 +467,14 @@ export component AppWindow inherits Window {
                         
                         // Input Area
                         Rectangle {
-                            background: #ffffff;
+                            background: is_dark ? #1a1a1a : #ffffff;
                             height: 62px;
                             
                             // Top border for input area
                             Rectangle {
                                 y: 0;
                                 height: 1px;
-                                background: #e1dfdd;
+                                background: is_dark ? #333333 : #e1dfdd;
                             }
                             
                             HorizontalBox {
@@ -477,10 +483,10 @@ export component AppWindow inherits Window {
                                 spacing: 12px;
                                 
                                 Rectangle {
-                                    background: #ffffff;
+                                    background: is_dark ? #252525 : #ffffff;
                                     border-radius: 20px;
                                     border-width: 1px;
-                                    border-color: input-area.has-focus ? #0078d4 : #605e5c;
+                                    border-color: input-area.has-focus ? #0078d4 : (is_dark ? #555555 : #605e5c);
                                     horizontal-stretch: 1;
                                     height: 40px;
                                     
@@ -493,7 +499,7 @@ export component AppWindow inherits Window {
                                             vertical-alignment: center;
                                             text <=> email_chat_input;
                                             font-size: 14px;
-                                            color: #323130;
+                                            color: is_dark ? #ffffff : #323130;
                                             single-line: true;
                                             
                                             accepted => {
@@ -517,9 +523,10 @@ export component AppWindow inherits Window {
                                     width: 40px;
                                     height: 40px;
                                     border-radius: 20px;
-                                    background: (email_chat_input != "" && !loading) ? #0078d4 : #f3f2f1;
+                                    background: (email_chat_input != "" && !loading) ? #0078d4 : (is_dark ? #333333 : #f3f2f1);
                                     
                                     TouchArea {
+                                        mouse-cursor: pointer;
                                         enabled: !loading && email_chat_input != "";
                                         clicked => {
                                             send_email_chat_message(email_chat_input);
@@ -542,7 +549,7 @@ export component AppWindow inherits Window {
 
             // Chat View
             if (active_tab == "chat") : Rectangle {
-                background: #ffffff;
+                background: is_dark ? #1a1a1a : #ffffff;
                 horizontal-stretch: 1;
                 
                 VerticalBox {
@@ -551,14 +558,14 @@ export component AppWindow inherits Window {
                     
                     // Header Area
                     Rectangle {
-                        background: #f3f2f1;
+                        background: is_dark ? #252525 : #f3f2f1;
                         height: 60px;
                         
                         // Bottom border for header
                         Rectangle {
                             y: parent.height - 1px;
                             height: 1px;
-                            background: #e1dfdd;
+                            background: is_dark ? #333333 : #e1dfdd;
                         }
                         
                         HorizontalBox {
@@ -572,11 +579,11 @@ export component AppWindow inherits Window {
                                     text: "All Emails Assistant";
                                     font-size: 16px;
                                     font-weight: 600;
-                                    color: #323130;
+                                    color: is_dark ? #ffffff : #323130;
                                 }
                                 Text {
                                     text: "Our AI processes all 1000 emails instantly.";
-                                    color: #605e5c;
+                                    color: is_dark ? #bbbbbb : #605e5c;
                                     font-size: 13px;
                                 }
                             }
@@ -585,7 +592,7 @@ export component AppWindow inherits Window {
                     
                     // Chat History Area
                     Rectangle {
-                        background: #ffffff;
+                        background: is_dark ? #1a1a1a : #ffffff;
                         vertical-stretch: 1;
                         
                         ScrollView {
@@ -598,13 +605,13 @@ export component AppWindow inherits Window {
                                     alignment: msg.is_user ? end : start;
                                     
                                     Rectangle {
-                                        background: msg.is_user ? #0078d4 : #f3f2f1;
+                                        background: msg.is_user ? #0078d4 : (is_dark ? #252525 : #f3f2f1);
                                         border-radius: 8px;
                                         border-top-right-radius: msg.is_user ? 0 : 8px;
                                         border-top-left-radius: msg.is_user ? 8px : 0;
                                         
                                         border-width: msg.is_user ? 0px : 1px;
-                                        border-color: #e1dfdd;
+                                        border-color: is_dark ? #333333 : #e1dfdd;
                                         
                                         HorizontalBox {
                                             padding-left: 12px;
@@ -614,7 +621,7 @@ export component AppWindow inherits Window {
                                             
                                             TextInput {
                                                 text: msg.text;
-                                                color: msg.is_user ? #ffffff : #323130;
+                                                color: msg.is_user ? #ffffff : (is_dark ? #ffffff : #323130);
                                                 font-size: 15px;
                                                 wrap: word-wrap;
                                                 read-only: true;
@@ -628,14 +635,14 @@ export component AppWindow inherits Window {
                     
                     // Input Area
                     Rectangle {
-                        background: #ffffff;
+                        background: is_dark ? #1a1a1a : #ffffff;
                         height: 62px;
                         
                         // Top border for input area
                         Rectangle {
                             y: 0;
                             height: 1px;
-                            background: #e1dfdd;
+                            background: is_dark ? #333333 : #e1dfdd;
                         }
                         
                         HorizontalBox {
@@ -644,10 +651,10 @@ export component AppWindow inherits Window {
                             spacing: 12px;
                             
                             Rectangle {
-                                background: #ffffff;
+                                background: is_dark ? #252525 : #ffffff;
                                 border-radius: 20px;
                                 border-width: 1px;
-                                border-color: all-emails-input-area.has-focus ? #0078d4 : #605e5c;
+                                border-color: all-emails-input-area.has-focus ? #0078d4 : (is_dark ? #555555 : #605e5c);
                                 horizontal-stretch: 1;
                                 height: 40px;
                                 
@@ -660,7 +667,7 @@ export component AppWindow inherits Window {
                                         vertical-alignment: center;
                                         text <=> chat_input;
                                         font-size: 15px;
-                                        color: #323130;
+                                        color: is_dark ? #ffffff : #323130;
                                         single-line: true;
                                         
                                         accepted => {
@@ -684,9 +691,10 @@ export component AppWindow inherits Window {
                                 width: 40px;
                                 height: 40px;
                                 border-radius: 20px;
-                                background: (chat_input != "" && !loading) ? #0078d4 : #f3f2f1;
+                                background: (chat_input != "" && !loading) ? #0078d4 : (is_dark ? #333333 : #f3f2f1);
                                 
                                 TouchArea {
+                                    mouse-cursor: pointer;
                                     enabled: !loading && chat_input != "";
                                     clicked => {
                                         send_chat_message(chat_input);
