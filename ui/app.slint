@@ -19,7 +19,7 @@ export component AppWindow inherits Window {
     title: "Neural Mail (Pure Rust)";
     preferred-width: 1500px;
     preferred-height: 800px;
-    background: #1a1a1a;
+    background: is_dark ? @linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%) : @linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
 
     callback fetch_emails();
     callback summarize_email(string);
@@ -97,7 +97,14 @@ export component AppWindow inherits Window {
             // Sidebar
             Rectangle {
                 width: 200px;
-                background: is_dark ? #252525 : #f3f2f1;
+                background: is_dark ? rgba(40, 40, 60, 0.4) : rgba(255, 255, 255, 0.6);
+                // Custom right border
+                Rectangle {
+                    width: 1px;
+                    height: 100%;
+                    x: parent.width - 1px;
+                    background: is_dark ? rgba(255, 255, 255, 0.1) : rgba(0, 0, 0, 0.1);
+                }
                 VerticalBox {
                     padding: 20px;
                     alignment: start;
@@ -199,8 +206,10 @@ export component AppWindow inherits Window {
                     // Theme Switcher
                     Rectangle {
                         height: 40px;
-                        background: is_dark ? #333333 : #e1dfdd;
+                        background: is_dark ? rgba(255, 255, 255, 0.05) : rgba(0, 0, 0, 0.05);
                         border-radius: 20px;
+                        border-width: 1px;
+                        border-color: is_dark ? rgba(255, 255, 255, 0.1) : rgba(0, 0, 0, 0.1);
                         
                         HorizontalBox {
                             alignment: center;
@@ -263,9 +272,9 @@ export component AppWindow inherits Window {
                 // Email List (Classic Layout)
                 Rectangle {
                     width: 350px;
-                    background: is_dark ? #1a1a1a : #f3f2f1;
+                    background: is_dark ? rgba(30, 30, 50, 0.3) : rgba(240, 240, 240, 0.5);
                     border-width: 1px;
-                    border-color: is_dark ? #333333 : #e1dfdd;
+                    border-color: is_dark ? rgba(255, 255, 255, 0.05) : rgba(0, 0, 0, 0.05);
                     
                     VerticalBox {
                         padding: 0; spacing: 0;
@@ -273,15 +282,15 @@ export component AppWindow inherits Window {
                         // Search Bar
                         Rectangle {
                             height: 48px;
-                            background: is_dark ? #1a1a1a : #f3f2f1;
+                            background: transparent;
                             
                             HorizontalBox {
                                 padding-left: 15px; padding-right: 15px; padding-top: 10px; padding-bottom: 8px;
                                 Rectangle {
-                                    background: is_dark ? #252525 : #ffffff;
-                                    border-radius: 4px;
+                                    background: is_dark ? rgba(0, 0, 0, 0.2) : rgba(255, 255, 255, 0.8);
+                                    border-radius: 6px;
                                     border-width: 1px;
-                                    border-color: is_dark ? #444444 : #e1dfdd;
+                                    border-color: is_dark ? rgba(255, 255, 255, 0.1) : rgba(0, 0, 0, 0.1);
                                     
                                     HorizontalLayout {
                                         padding-left: 10px; padding-right: 10px; spacing: 8px;
@@ -315,7 +324,7 @@ export component AppWindow inherits Window {
                                 spacing: 0;
                                 for email in emails : Rectangle {
                                     height: 75px;
-                                    background: active_email_subject == email.subject ? (is_dark ? #333333 : #ffffff) : (is_dark ? #1a1a1a : #f3f2f1);
+                                    background: active_email_subject == email.subject ? (is_dark ? rgba(255, 255, 255, 0.1) : rgba(255, 255, 255, 0.9)) : transparent;
                                     
                                     // Subtle left border for active item
                                     Rectangle {
@@ -357,7 +366,7 @@ export component AppWindow inherits Window {
                                     Rectangle {
                                         y: parent.height - 1px;
                                         height: 1px;
-                                        background: is_dark ? #333333 : #e1dfdd;
+                                        background: is_dark ? rgba(255, 255, 255, 0.05) : rgba(0, 0, 0, 0.05);
                                     }
                                 }
                             }
@@ -367,7 +376,7 @@ export component AppWindow inherits Window {
 
                 // Detail View (Outlook Reading Pane Style)
                 Rectangle {
-                    background: is_dark ? #1a1a1a : #ffffff;
+                    background: is_dark ? rgba(20, 20, 40, 0.2) : rgba(255, 255, 255, 0.4);
                     horizontal-stretch: 1;
                     
                     VerticalBox {
@@ -376,9 +385,14 @@ export component AppWindow inherits Window {
                         
                         // Header
                         if !show_compose_dialog : Rectangle {
-                            background: is_dark ? #1a1a1a : #ffffff;
-                            border-width: 1px;
-                            border-color: is_dark ? #333333 : #e1dfdd;
+                            background: transparent;
+                            // Custom bottom border
+                            Rectangle {
+                                height: 1px;
+                                width: 100%;
+                                y: parent.height - 1px;
+                                background: is_dark ? rgba(255, 255, 255, 0.1) : rgba(0, 0, 0, 0.1);
+                            }
                             height: 100px;
                             
                             HorizontalBox {
@@ -410,10 +424,10 @@ export component AppWindow inherits Window {
                                     Rectangle {
                                         width: 80px;
                                         height: 36px;
-                                        border-radius: 4px;
-                                        background: is_dark ? #252525 : #f3f2f1;
+                                        border-radius: 6px;
+                                        background: is_dark ? rgba(255, 255, 255, 0.05) : rgba(0, 0, 0, 0.05);
                                         border-width: 1px;
-                                        border-color: is_dark ? #333333 : #e1dfdd;
+                                        border-color: is_dark ? rgba(255, 255, 255, 0.1) : rgba(0, 0, 0, 0.1);
                                         TouchArea {
                                             mouse-cursor: pointer;
                                             clicked => {
@@ -430,10 +444,10 @@ export component AppWindow inherits Window {
                                     Rectangle {
                                         width: 90px;
                                         height: 36px;
-                                        border-radius: 4px;
-                                        background: is_dark ? #252525 : #f3f2f1;
+                                        border-radius: 6px;
+                                        background: is_dark ? rgba(255, 255, 255, 0.05) : rgba(0, 0, 0, 0.05);
                                         border-width: 1px;
-                                        border-color: is_dark ? #333333 : #e1dfdd;
+                                        border-color: is_dark ? rgba(255, 255, 255, 0.1) : rgba(0, 0, 0, 0.1);
                                         TouchArea {
                                             mouse-cursor: pointer;
                                             clicked => {
@@ -450,10 +464,10 @@ export component AppWindow inherits Window {
                                     Rectangle {
                                         width: 80px;
                                         height: 36px;
-                                        border-radius: 4px;
-                                        background: is_dark ? #252525 : #f3f2f1;
+                                        border-radius: 6px;
+                                        background: is_dark ? rgba(255, 255, 255, 0.05) : rgba(0, 0, 0, 0.05);
                                         border-width: 1px;
-                                        border-color: is_dark ? #333333 : #e1dfdd;
+                                        border-color: is_dark ? rgba(255, 255, 255, 0.1) : rgba(0, 0, 0, 0.1);
                                         TouchArea {
                                             mouse-cursor: pointer;
                                             clicked => {
@@ -470,10 +484,10 @@ export component AppWindow inherits Window {
                                     Rectangle {
                                         width: 125px;
                                         height: 36px;
-                                        border-radius: 4px;
-                                        background: is_dark ? #3d2a5a : #f4e8ff;
+                                        border-radius: 6px;
+                                        background: is_dark ? rgba(120, 80, 200, 0.2) : rgba(230, 200, 255, 0.6);
                                         border-width: 1px;
-                                        border-color: is_dark ? #533e7b : #dcbdfc;
+                                        border-color: is_dark ? rgba(255, 255, 255, 0.2) : rgba(0, 0, 0, 0.1);
                                         TouchArea {
                                             mouse-cursor: pointer;
                                             clicked => {
@@ -497,10 +511,10 @@ export component AppWindow inherits Window {
                                     Rectangle {
                                         width: 130px;
                                         height: 36px;
-                                        border-radius: 4px;
-                                        background: is_dark ? #252525 : #f3f2f1;
+                                        border-radius: 6px;
+                                        background: is_dark ? rgba(255, 255, 255, 0.05) : rgba(0, 0, 0, 0.05);
                                         border-width: 1px;
-                                        border-color: is_dark ? #333333 : #e1dfdd;
+                                        border-color: is_dark ? rgba(255, 255, 255, 0.1) : rgba(0, 0, 0, 0.1);
                                         
                                         HorizontalBox {
                                             alignment: center;
@@ -1005,14 +1019,14 @@ export component AppWindow inherits Window {
                     
                     // Input Area
                     Rectangle {
-                        background: is_dark ? #1a1a1a : #ffffff;
+                        background: transparent;
                         height: 62px;
                         
                         // Top border for input area
                         Rectangle {
                             y: 0;
                             height: 1px;
-                            background: is_dark ? #333333 : #e1dfdd;
+                            background: is_dark ? rgba(255, 255, 255, 0.1) : rgba(0, 0, 0, 0.1);
                         }
                         
                         HorizontalBox {
@@ -1021,10 +1035,10 @@ export component AppWindow inherits Window {
                             spacing: 12px;
                             
                             Rectangle {
-                                background: is_dark ? #252525 : #ffffff;
+                                background: is_dark ? rgba(0, 0, 0, 0.2) : rgba(255, 255, 255, 0.8);
                                 border-radius: 20px;
                                 border-width: 1px;
-                                border-color: all-emails-input-area.has-focus ? #0078d4 : (is_dark ? #555555 : #605e5c);
+                                border-color: all-emails-input-area.has-focus ? #0078d4 : (is_dark ? rgba(255, 255, 255, 0.1) : rgba(0, 0, 0, 0.1));
                                 horizontal-stretch: 1;
                                 height: 40px;
                                 
@@ -1096,10 +1110,10 @@ export component AppWindow inherits Window {
         Rectangle {
             width: 400px;
             height: 400px;
-            background: #252525;
+            background: is_dark ? rgba(30, 30, 50, 0.8) : rgba(255, 255, 255, 0.9);
             border-radius: 12px;
             border-width: 1px;
-            border-color: #333333;
+            border-color: is_dark ? rgba(255, 255, 255, 0.2) : rgba(0, 0, 0, 0.2);
             
             VerticalBox {
                 padding: 30px;
@@ -1163,7 +1177,7 @@ export component AppWindow inherits Window {
 
         // Lock Screen Overlay
         if is_locked : Rectangle {
-            background: is_dark ? #1a1a1a : #f3f2f1;
+            background: is_dark ? @linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%) : @linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
             z: 100;
             
             VerticalBox {
@@ -1189,10 +1203,10 @@ export component AppWindow inherits Window {
                 Rectangle {
                     width: 300px;
                     height: 40px;
-                    background: is_dark ? #252525 : #ffffff;
-                    border-radius: 4px;
+                    background: is_dark ? rgba(255, 255, 255, 0.05) : rgba(255, 255, 255, 0.8);
+                    border-radius: 6px;
                     border-width: 1px;
-                    border-color: #0078d4;
+                    border-color: rgba(0, 120, 212, 0.5);
                     
                     TextInput {
                         text <=> password_input;
