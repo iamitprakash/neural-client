@@ -9,6 +9,7 @@ pub struct DbEmail {
     pub date: String,
     pub body: String,
     pub has_attachment: bool,
+    pub category: String,
 }
 
 pub fn init_db() -> Result<()> {
@@ -20,10 +21,17 @@ pub fn init_db() -> Result<()> {
             sender TEXT NOT NULL,
             date_str TEXT NOT NULL,
             body TEXT NOT NULL,
-            has_attachment INTEGER NOT NULL
+            has_attachment INTEGER NOT NULL,
+            category TEXT NOT NULL DEFAULT 'Inbox'
         )",
         [],
     )?;
+    // Migration: Add category if it doesn't exist (for existing DBs)
+    let _ = conn.execute(
+        "ALTER TABLE emails ADD COLUMN category TEXT NOT NULL DEFAULT 'Inbox'",
+        [],
+    );
+
     conn.execute(
         "CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
@@ -43,8 +51,8 @@ pub fn insert_emails(emails: &[DbEmail]) -> Result<()> {
 
     {
         let mut stmt = tx.prepare(
-            "INSERT INTO emails (id, subject, sender, date_str, body, has_attachment) 
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO emails (id, subject, sender, date_str, body, has_attachment, category) 
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         )?;
 
         for email in emails {
@@ -54,7 +62,8 @@ pub fn insert_emails(emails: &[DbEmail]) -> Result<()> {
                 email.sender,
                 email.date,
                 email.body,
-                if email.has_attachment { 1 } else { 0 }
+                if email.has_attachment { 1 } else { 0 },
+                email.category
             ])?;
         }
     }
@@ -64,8 +73,9 @@ pub fn insert_emails(emails: &[DbEmail]) -> Result<()> {
 
 pub fn get_all_emails() -> Result<Vec<DbEmail>> {
     let conn = Connection::open("neural-mail.db")?;
-    let mut stmt =
-        conn.prepare("SELECT id, subject, sender, date_str, body, has_attachment FROM emails")?;
+    let mut stmt = conn.prepare(
+        "SELECT id, subject, sender, date_str, body, has_attachment, category FROM emails",
+    )?;
     let email_iter = stmt.query_map([], |row| {
         Ok(DbEmail {
             id: row.get(0)?,
@@ -74,6 +84,70 @@ pub fn get_all_emails() -> Result<Vec<DbEmail>> {
             date: row.get(3)?,
             body: row.get(4)?,
             has_attachment: row.get::<_, i32>(5)? == 1,
+            category: row.get(6)?,
+        })
+    })?;
+
+    let mut emails = Vec::new();
+    for email in email_iter {
+        emails.push(email?);
+    }
+    Ok(emails)
+}
+
+pub fn search_emails(query: &str) -> Result<Vec<DbEmail>> {
+    if query.trim().is_empty() {
+        return get_all_emails();
+    }
+    let conn = Connection::open("neural-mail.db")?;
+    let mut stmt = conn.prepare(
+        "SELECT id, subject, sender, date_str, body, has_attachment, category FROM emails 
+         WHERE subject LIKE ?1 OR sender LIKE ?2 OR body LIKE ?3",
+    )?;
+    let q = format!("%{}%", query);
+    let email_iter = stmt.query_map(params![&q, &q, &q], |row| {
+        Ok(DbEmail {
+            id: row.get(0)?,
+            subject: row.get(1)?,
+            sender: row.get(2)?,
+            date: row.get(3)?,
+            body: row.get(4)?,
+            has_attachment: row.get::<_, i32>(5)? == 1,
+            category: row.get(6)?,
+        })
+    })?;
+
+    let mut emails = Vec::new();
+    for email in email_iter {
+        emails.push(email?);
+    }
+    Ok(emails)
+}
+
+pub fn update_email_category(id: i32, category: &str) -> Result<()> {
+    let conn = Connection::open("neural-mail.db")?;
+    conn.execute(
+        "UPDATE emails SET category = ?1 WHERE id = ?2",
+        params![category, id],
+    )?;
+    Ok(())
+}
+
+pub fn get_emails_by_category(category: &str) -> Result<Vec<DbEmail>> {
+    let conn = Connection::open("neural-mail.db")?;
+    let mut stmt = conn.prepare(
+        "SELECT id, subject, sender, date_str, body, has_attachment, category FROM emails 
+         WHERE category = ?1",
+    )?;
+    let email_iter = stmt.query_map(params![category], |row| {
+        Ok(DbEmail {
+            id: row.get(0)?,
+            subject: row.get(1)?,
+            sender: row.get(2)?,
+            date: row.get(3)?,
+            body: row.get(4)?,
+            has_attachment: row.get::<_, i32>(5)? == 1,
+            category: row.get(6)?,
         })
     })?;
 

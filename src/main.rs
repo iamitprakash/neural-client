@@ -16,7 +16,8 @@ use rand::RngExt; // For random_range, random_bool in 0.10.0
 fn main() -> Result<(), slint::PlatformError> {
     let ui = AppWindow::new()?;
     let rt = Runtime::new().unwrap();
-    let rt_handle_ai = rt.handle().clone();
+    let rt_handle_fetch = rt.handle().clone();
+    let rt_handle_email_chat = rt.handle().clone();
     let rt_handle_chat = rt.handle().clone();
     let rt_handle_reply = rt.handle().clone();
     
@@ -69,6 +70,7 @@ fn main() -> Result<(), slint::PlatformError> {
                     date,
                     body: bodies[body_idx].into(),
                     has_attachment,
+                    category: "Inbox".into(),
                 });
             }
             
@@ -95,14 +97,77 @@ fn main() -> Result<(), slint::PlatformError> {
                         date: e.date.into(),
                         body: e.body.into(),
                         has_attachment: e.has_attachment,
+                        category: e.category.into(),
                     });
                 }
                 let model = Rc::new(VecModel::from(slint_emails));
                 ui.set_emails(ModelRc::from(model));
                 ui.set_status_message("Loaded Emails from DB".into());
+                
+                // Background Categorize Task
+                let rt_bg = rt_handle_fetch.clone();
+                rt_bg.spawn(async move {
+                    if let Ok(emails) = db::get_all_emails() {
+                        for e in emails.iter().take(20) { // Just categorize first 20 for demo
+                            if e.category == "Inbox" {
+                                if let Ok(new_cat) = ai::categorize_email(&e.subject, &e.body).await {
+                                    let _ = db::update_email_category(e.id, &new_cat);
+                                }
+                            }
+                        }
+                    }
+                });
             },
             Err(e) => {
                 ui.set_status_message(format!("DB error: {}", e).into());
+            }
+        }
+    });
+
+    let ui_handle_cat = ui.as_weak();
+    ui.on_category_changed(move |cat: slint::SharedString| {
+        if let Some(ui) = ui_handle_cat.upgrade() {
+            let mut slint_emails = Vec::new();
+            match db::get_emails_by_category(cat.as_str()) {
+                Ok(db_emails) => {
+                    for e in db_emails {
+                        slint_emails.push(Email {
+                            id: e.id,
+                            subject: e.subject.into(),
+                            sender: e.sender.into(),
+                            date: e.date.into(),
+                            body: e.body.into(),
+                            has_attachment: e.has_attachment,
+                            category: e.category.into(),
+                        });
+                    }
+                    ui.set_emails(ModelRc::from(Rc::new(VecModel::from(slint_emails))));
+                }
+                Err(e) => eprintln!("Category error: {}", e),
+            }
+        }
+    });
+
+    let ui_handle_search = ui.as_weak();
+    ui.on_search_changed(move |query: slint::SharedString| {
+        if let Some(ui) = ui_handle_search.upgrade() {
+            let mut slint_emails = Vec::new();
+            match db::search_emails(query.as_str()) {
+                Ok(db_emails) => {
+                    for e in db_emails {
+                        slint_emails.push(Email {
+                            id: e.id,
+                            subject: e.subject.into(),
+                            sender: e.sender.into(),
+                            date: e.date.into(),
+                            body: e.body.into(),
+                            has_attachment: e.has_attachment,
+                            category: e.category.into(),
+                        });
+                    }
+                    ui.set_emails(ModelRc::from(Rc::new(VecModel::from(slint_emails))));
+                }
+                Err(e) => eprintln!("Search error: {}", e),
             }
         }
     });
@@ -131,7 +196,7 @@ fn main() -> Result<(), slint::PlatformError> {
         ui.set_email_chat_history(ModelRc::from(Rc::new(VecModel::from(history))));
         ui.set_email_chat_input("".into());
 
-        rt_handle_ai.spawn(async move {
+        rt_handle_email_chat.spawn(async move {
             let context_str = format!("From: {}\nSubject: {}\nBody: {}\n", sender, subject, body);
             
             let result = ai::chat_with_emails(&msg_clone, &context_str).await;
@@ -361,10 +426,19 @@ fn main() -> Result<(), slint::PlatformError> {
     let ui_handle_attachments = ui.as_weak();
     ui.on_add_attachment(move || {
         if let Some(ui) = ui_handle_attachments.upgrade() {
-            let mut current: Vec<slint::SharedString> = ui.get_compose_attachments().iter().collect();
-            let mock_filename = format!("document_{}.pdf", current.len() + 1);
-            current.push(mock_filename.into());
-            ui.set_compose_attachments(ModelRc::from(Rc::new(VecModel::from(current))));
+            if let Some(file_path) = rfd::FileDialog::new()
+                .set_title("Select Attachment")
+                .pick_file() 
+            {
+                let filename = file_path.file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string();
+                
+                let mut current: Vec<slint::SharedString> = ui.get_compose_attachments().iter().collect();
+                current.push(filename.into());
+                ui.set_compose_attachments(ModelRc::from(Rc::new(VecModel::from(current))));
+            }
         }
     });
 

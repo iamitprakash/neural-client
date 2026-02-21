@@ -7,6 +7,7 @@ export struct Email {
     date: string,
     body: string,
     has_attachment: bool,
+    category: string,
 }
 
 export struct ChatMessage {
@@ -32,6 +33,11 @@ export component AppWindow inherits Window {
     in property <bool> loading: false;
     in-out property <bool> show_account_dialog: false;
     in-out property <string> active_tab: "inbox"; // "inbox" or "chat"
+    in-out property <string> search_text: "";
+    in-out property <string> active_category: "Inbox";
+    
+    callback search_changed(string);
+    callback category_changed(string);
     in-out property <string> chat_input: "";
     in property <[ChatMessage]> chat_history: [];
 
@@ -136,13 +142,41 @@ export component AppWindow inherits Window {
                     TouchArea {
                         mouse-cursor: pointer;
                         clicked => { active_tab = "chat"; }
-                        Text { text: "AI Chat"; color: active_tab == "chat" ? #007aff : #888888; font-weight: active_tab == "chat" ? 600 : 400; }
+                        Text { text: "Tejas Assistant"; color: active_tab == "chat" ? #007aff : #888888; font-weight: active_tab == "chat" ? 600 : 400; }
                     }
                     
-                    Rectangle { height: 20px; }
-                    Text { text: "Sent"; color: #888888; }
-                    Text { text: "Drafts"; color: #888888; }
-                    Text { text: "Trash"; color: #888888; }
+                    Rectangle { height: 25px; }
+                    Text { text: "Smart Folders"; color: #888888; font-size: 11px; font-weight: 700; }
+                    Rectangle { height: 8px; }
+                    
+                    VerticalBox {
+                        padding: 0; spacing: 10px;
+                        for cat in ["Inbox", "Work", "Finance", "Social", "Promotions"] : TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { active_tab = "inbox"; active_category = cat; category_changed(cat); }
+                            HorizontalBox {
+                                padding: 0; spacing: 10px;
+                                Text { 
+                                    text: cat == "Inbox" ? "📥" : (cat == "Work" ? "💼" : (cat == "Finance" ? "💰" : (cat == "Social" ? "💬" : "🏷️"))); 
+                                    font-size: 14px; vertical-alignment: center; 
+                                }
+                                Text { 
+                                    text: cat; 
+                                    color: (active_tab == "inbox" && active_category == cat) ? #0078d4 : (is_dark ? #aaaaaa : #888888); 
+                                    font-weight: (active_tab == "inbox" && active_category == cat) ? 600 : 400; 
+                                    font-size: 14px;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                    
+                    Rectangle { height: 30px; }
+                    Text { text: "System Folders"; color: #888888; font-size: 11px; font-weight: 700; }
+                    Rectangle { height: 8px; }
+                    Text { text: "Sent"; color: #888888; font-size: 14px; }
+                    Text { text: "Drafts"; color: #888888; font-size: 14px; }
+                    Text { text: "Trash"; color: #888888; font-size: 14px; }
                     
                     Rectangle { height: 30px; }
                     
@@ -226,7 +260,42 @@ export component AppWindow inherits Window {
                     border-color: is_dark ? #333333 : #e1dfdd;
                     
                     VerticalBox {
-                        padding: 0;
+                        padding: 0; spacing: 0;
+                        
+                        // Search Bar
+                        Rectangle {
+                            height: 48px;
+                            background: is_dark ? #1a1a1a : #f3f2f1;
+                            
+                            HorizontalBox {
+                                padding-left: 15px; padding-right: 15px; padding-top: 10px; padding-bottom: 8px;
+                                Rectangle {
+                                    background: is_dark ? #252525 : #ffffff;
+                                    border-radius: 4px;
+                                    border-width: 1px;
+                                    border-color: is_dark ? #444444 : #e1dfdd;
+                                    
+                                    HorizontalBox {
+                                        padding-left: 10px; padding-right: 10px; spacing: 8px;
+                                        Text { text: "🔍"; font-size: 14px; vertical-alignment: center; }
+                                        TextInput {
+                                            text <=> search_text;
+                                            color: is_dark ? #ffffff : #323130;
+                                            font-size: 14px;
+                                            vertical-alignment: center;
+                                            single-line: true;
+                                            edited => { search_changed(self.text); }
+                                        }
+                                        if search_text != "" : TouchArea {
+                                            width: 16px; mouse-cursor: pointer;
+                                            clicked => { search_text = ""; search_changed(""); }
+                                            Text { text: "✕"; color: #888888; font-size: 10px; vertical-alignment: center; horizontal-alignment: center; }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         ScrollView {
                             VerticalBox {
                                 alignment: start;
@@ -448,6 +517,7 @@ export component AppWindow inherits Window {
                                         text: active_email_body;
                                         color: is_dark ? #e1dfdd : #323130;
                                         font-size: 15px;
+                                        font-family: "sans-serif";
                                         wrap: word-wrap;
                                     }
                                 }
@@ -910,6 +980,7 @@ export component AppWindow inherits Window {
                                                 text: msg.text;
                                                 color: msg.is_user ? #ffffff : (is_dark ? #ffffff : #323130);
                                                 font-size: 15px;
+                                                font-family: "monospace";
                                                 wrap: word-wrap;
                                                 read-only: true;
                                             }
