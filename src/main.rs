@@ -224,5 +224,21 @@ fn main() -> Result<(), slint::PlatformError> {
         ui.set_theme_mode(mode.into());
     }
 
+    let ui_handle_send = ui.as_weak();
+    ui.on_send_email(move |to, subject, body| {
+        println!("====== OUTBOUND EMAIL MOCK ======");
+        println!("TO: {}", to);
+        println!("SUBJECT: {}", subject);
+        println!("------------- BODY --------------");
+        println!("{}", body);
+        println!("=================================");
+        if let Some(ui) = ui_handle_send.upgrade() {
+            ui.set_show_compose_dialog(false);
+            ui.set_compose_to("".into());
+            ui.set_compose_subject("".into());
+            ui.set_compose_body("".into());
+        }
+    });
+
     ui.run()
 }

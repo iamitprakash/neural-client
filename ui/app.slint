@@ -57,6 +57,13 @@ export component AppWindow inherits Window {
     
     in property <bool> has_accounts: false;
 
+    // Compose Form
+    in-out property <bool> show_compose_dialog: false;
+    in-out property <string> compose_to: "";
+    in-out property <string> compose_subject: "";
+    in-out property <string> compose_body: "";
+    callback send_email(string, string, string);
+
     // Main Layout Area
     Rectangle {
         HorizontalBox {
@@ -78,6 +85,28 @@ export component AppWindow inherits Window {
                         font-weight: 800;
                         color: is_dark ? #ffffff : #323130;
                         horizontal-alignment: center;
+                    }
+                    
+                    Rectangle { height: 20px; }
+                    
+                    Rectangle {
+                        background: #0078d4;
+                        border-radius: 4px;
+                        height: 36px;
+                        TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                compose_to = "";
+                                compose_subject = "";
+                                compose_body = "";
+                                show_compose_dialog = true;
+                            }
+                        }
+                        HorizontalBox {
+                            alignment: center;
+                            padding: 0;
+                            Text { text: "New Email"; color: #ffffff; font-weight: 600; vertical-alignment: center; }
+                        }
                     }
                     
                     Rectangle { height: 20px; }
@@ -273,25 +302,93 @@ export component AppWindow inherits Window {
                                     }
                                 }
                                 
-                                // Copilot-like interaction button
-                                if active_email_sender != "" : Rectangle {
-                                    width: 160px;
-                                    height: 40px;
-                                    border-radius: 4px;
-                                    background: is_dark ? #252525 : #f3f2f1;
-                                    border-width: 1px;
-                                    border-color: is_dark ? #333333 : #e1dfdd;
-                                    
-                                    HorizontalBox {
-                                        alignment: center;
-                                        spacing: 8px;
-                                        Text { text: "✦"; color: #0078d4; font-size: 16px; }
-                                        Text { text: "Ask Tejas"; color: is_dark ? #ffffff : #323130; font-size: 13px; font-weight: 600; }
+                                // Copilot and Reply interaction buttons
+                                if active_email_sender != "" : HorizontalBox {
+                                    alignment: end;
+                                    spacing: 12px;
+                                    padding: 0;
+
+                                    // Reply Button
+                                    Rectangle {
+                                        width: 80px;
+                                        height: 36px;
+                                        border-radius: 4px;
+                                        background: is_dark ? #252525 : #f3f2f1;
+                                        border-width: 1px;
+                                        border-color: is_dark ? #333333 : #e1dfdd;
+                                        TouchArea {
+                                            mouse-cursor: pointer;
+                                            clicked => {
+                                                compose_to = active_email_sender;
+                                                compose_subject = "Re: " + active_email_subject;
+                                                compose_body = "\n\n--- Original Message ---\nFrom: " + active_email_sender + "\nSubject: " + active_email_subject + "\n\n" + active_email_body;
+                                                show_compose_dialog = true;
+                                            }
+                                        }
+                                        HorizontalBox { alignment: center; padding: 0; Text { text: "Reply"; color: is_dark ? #ffffff : #323130; font-size: 13px; font-weight: 600; vertical-alignment: center; } }
                                     }
-                                    
-                                    TouchArea {
-                                        mouse-cursor: pointer;
-                                        clicked => { show_email_chat_popup = !show_email_chat_popup; }
+
+                                    // Reply All Button
+                                    Rectangle {
+                                        width: 90px;
+                                        height: 36px;
+                                        border-radius: 4px;
+                                        background: is_dark ? #252525 : #f3f2f1;
+                                        border-width: 1px;
+                                        border-color: is_dark ? #333333 : #e1dfdd;
+                                        TouchArea {
+                                            mouse-cursor: pointer;
+                                            clicked => {
+                                                compose_to = active_email_sender;
+                                                compose_subject = "Re: " + active_email_subject;
+                                                compose_body = "\n\n--- Original Message ---\nFrom: " + active_email_sender + "\nSubject: " + active_email_subject + "\n\n" + active_email_body;
+                                                show_compose_dialog = true;
+                                            }
+                                        }
+                                        HorizontalBox { alignment: center; padding: 0; Text { text: "Reply All"; color: is_dark ? #ffffff : #323130; font-size: 13px; font-weight: 600; vertical-alignment: center; } }
+                                    }
+
+                                    // Forward Button
+                                    Rectangle {
+                                        width: 80px;
+                                        height: 36px;
+                                        border-radius: 4px;
+                                        background: is_dark ? #252525 : #f3f2f1;
+                                        border-width: 1px;
+                                        border-color: is_dark ? #333333 : #e1dfdd;
+                                        TouchArea {
+                                            mouse-cursor: pointer;
+                                            clicked => {
+                                                compose_to = "";
+                                                compose_subject = "Fwd: " + active_email_subject;
+                                                compose_body = "\n\n--- Forwarded Message ---\nFrom: " + active_email_sender + "\nSubject: " + active_email_subject + "\n\n" + active_email_body;
+                                                show_compose_dialog = true;
+                                            }
+                                        }
+                                        HorizontalBox { alignment: center; padding: 0; Text { text: "Forward"; color: is_dark ? #ffffff : #323130; font-size: 13px; font-weight: 600; vertical-alignment: center; } }
+                                    }
+
+                                    // Ask Tejas Modal
+                                    Rectangle {
+                                        width: 130px;
+                                        height: 36px;
+                                        border-radius: 4px;
+                                        background: is_dark ? #252525 : #f3f2f1;
+                                        border-width: 1px;
+                                        border-color: is_dark ? #333333 : #e1dfdd;
+                                        
+                                        HorizontalBox {
+                                            alignment: center;
+                                            spacing: 8px;
+                                            padding: 0;
+                                            Text { text: "✦"; color: #0078d4; font-size: 16px; vertical-alignment: center; }
+                                            Text { text: "Ask Tejas"; color: is_dark ? #ffffff : #323130; font-size: 13px; font-weight: 600; vertical-alignment: center; }
+                                        }
+                                        
+                                        TouchArea {
+                                            mouse-cursor: pointer;
+                                            clicked => { show_email_chat_popup = !show_email_chat_popup; }
+                                        }
                                     }
                                 }
                             }
@@ -716,6 +813,149 @@ export component AppWindow inherits Window {
         }
 
         // Welcome Screen removed to bypass login
+    }
+
+    // Compose Email Dialog Overlay
+    if show_compose_dialog : Rectangle {
+        background: is_dark ? #000000dd : #00000088;
+        TouchArea { } // Eat clicks outside the dialog
+        
+        Rectangle {
+            width: 700px;
+            height: 600px;
+            background: is_dark ? #252525 : #ffffff;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: is_dark ? #333333 : #e1dfdd;
+            
+            VerticalBox {
+                padding: 0;
+                spacing: 0;
+                
+                // Header
+                Rectangle {
+                    height: 50px;
+                    background: is_dark ? #1a1a1a : #f3f2f1;
+                    border-top-left-radius: 8px;
+                    border-top-right-radius: 8px;
+                    
+                    Rectangle {
+                        y: parent.height - 1px;
+                        height: 1px;
+                        background: is_dark ? #333333 : #e1dfdd;
+                    }
+                    
+                    HorizontalBox {
+                        padding-left: 20px;
+                        padding-right: 20px;
+                        alignment: space-between;
+                        
+                        Text { text: "Compose Email"; color: is_dark ? #ffffff : #323130; font-size: 16px; font-weight: 600; vertical-alignment: center; }
+                        
+                        Rectangle {
+                            width: 30px;
+                            height: 30px;
+                            TouchArea { mouse-cursor: pointer; clicked => { show_compose_dialog = false; } }
+                            Text { text: "✕"; color: is_dark ? #ffffff : #323130; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; }
+                        }
+                    }
+                }
+                
+                // Body
+                VerticalBox {
+                    padding: 20px;
+                    spacing: 15px;
+                    
+                    HorizontalBox {
+                        spacing: 15px;
+                        padding: 0;
+                        Text { text: "To:"; color: is_dark ? #bbbbbb : #605e5c; font-size: 14px; vertical-alignment: center; width: 60px; }
+                        Rectangle {
+                            height: 36px;
+                            border-width: 1px;
+                            border-color: is_dark ? #444444 : #e1dfdd;
+                            background: is_dark ? #1a1a1a : #ffffff;
+                            border-radius: 4px;
+                            HorizontalBox {
+                                padding-left: 10px; padding-right: 10px; padding-top: 0; padding-bottom: 0;
+                                TextInput { text <=> compose_to; color: is_dark ? #ffffff : #323130; font-size: 14px; vertical-alignment: center; single-line: true; }
+                            }
+                        }
+                    }
+                    
+                    HorizontalBox {
+                        spacing: 15px;
+                        padding: 0;
+                        Text { text: "Subject:"; color: is_dark ? #bbbbbb : #605e5c; font-size: 14px; vertical-alignment: center; width: 60px; }
+                        Rectangle {
+                            height: 36px;
+                            border-width: 1px;
+                            border-color: is_dark ? #444444 : #e1dfdd;
+                            background: is_dark ? #1a1a1a : #ffffff;
+                            border-radius: 4px;
+                            HorizontalBox {
+                                padding-left: 10px; padding-right: 10px; padding-top: 0; padding-bottom: 0;
+                                TextInput { text <=> compose_subject; color: is_dark ? #ffffff : #323130; font-size: 14px; vertical-alignment: center; single-line: true; }
+                            }
+                        }
+                    }
+                    
+                    Rectangle {
+                        border-width: 1px;
+                        border-color: is_dark ? #444444 : #e1dfdd;
+                        background: is_dark ? #1a1a1a : #ffffff;
+                        border-radius: 4px;
+                        vertical-stretch: 1;
+                        HorizontalBox {
+                            padding: 10px;
+                            TextInput { text <=> compose_body; color: is_dark ? #ffffff : #323130; font-size: 14px; wrap: word-wrap; }
+                        }
+                    }
+                }
+                
+                // Footer
+                Rectangle {
+                    height: 60px;
+                    background: is_dark ? #252525 : #ffffff;
+                    border-bottom-left-radius: 8px;
+                    border-bottom-right-radius: 8px;
+                    
+                    Rectangle {
+                        y: 0;
+                        height: 1px;
+                        background: is_dark ? #333333 : #e1dfdd;
+                    }
+                    
+                    HorizontalBox {
+                        padding-left: 20px;
+                        padding-right: 20px;
+                        alignment: space-between;
+                        
+                        Rectangle {
+                            width: 80px;
+                            height: 36px;
+                            background: transparent;
+                            TouchArea { mouse-cursor: pointer; clicked => { show_compose_dialog = false; } }
+                            HorizontalBox { alignment: center; padding: 0; Text { text: "Discard"; color: #d13438; font-size: 14px; font-weight: 600; vertical-alignment: center; } }
+                        }
+                        
+                        Rectangle {
+                            width: 100px;
+                            height: 36px;
+                            background: #0078d4;
+                            border-radius: 4px;
+                            TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => {
+                                    send_email(compose_to, compose_subject, compose_body);
+                                }
+                            }
+                            HorizontalBox { alignment: center; padding: 0; Text { text: "Send ➤"; color: #ffffff; font-size: 14px; font-weight: 600; vertical-alignment: center; } }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // Add Account Dialog Overlay (Layered on top of main layout)
