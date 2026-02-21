@@ -17,6 +17,7 @@ fn main() -> Result<(), slint::PlatformError> {
     let rt = Runtime::new().unwrap();
     let rt_handle_ai = rt.handle().clone();
     let rt_handle_chat = rt.handle().clone();
+    let rt_handle_reply = rt.handle().clone();
     
     // Initialize both DBs (accounts if we ever use them, and emails)
     let _ = auth::init_db();
@@ -238,6 +239,35 @@ fn main() -> Result<(), slint::PlatformError> {
             ui.set_compose_subject("".into());
             ui.set_compose_body("".into());
         }
+    });
+
+    let ui_handle_ai_reply = ui.as_weak();
+    ui.on_generate_ai_reply(move |sender, subject, original_body| {
+        let ui_handle_async = ui_handle_ai_reply.clone();
+        let sender_clone = sender.to_string();
+        let subject_clone = subject.to_string();
+        let original_body_clone = original_body.to_string();
+        
+        rt_handle_reply.spawn(async move {
+            let result = ai::generate_reply(&original_body_clone).await;
+            
+            let final_reply = match result {
+                Ok(reply) => reply,
+                Err(e) => format!("Error generating reply: {}", e),
+            };
+            
+            // Reconstruct the full compose body with the AI's draft on top
+            let reconstructed_body = format!(
+                "{}\n\n--- Original Message ---\nFrom: {}\nSubject: {}\n\n{}", 
+                final_reply, sender_clone, subject_clone, original_body_clone
+            );
+            
+            let _ = slint::invoke_from_event_loop(move || {
+                if let Some(ui) = ui_handle_async.upgrade() {
+                    ui.set_compose_body(reconstructed_body.into());
+                }
+            });
+        });
     });
 
     ui.run()

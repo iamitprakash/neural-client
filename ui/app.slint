@@ -63,6 +63,7 @@ export component AppWindow inherits Window {
     in-out property <string> compose_subject: "";
     in-out property <string> compose_body: "";
     callback send_email(string, string, string);
+    callback generate_ai_reply(string, string, string);
 
     // Main Layout Area
     Rectangle {
@@ -277,7 +278,7 @@ export component AppWindow inherits Window {
                         spacing: 0;
                         
                         // Header
-                        Rectangle {
+                        if !show_compose_dialog : Rectangle {
                             background: is_dark ? #1a1a1a : #ffffff;
                             border-width: 1px;
                             border-color: is_dark ? #333333 : #e1dfdd;
@@ -367,6 +368,33 @@ export component AppWindow inherits Window {
                                         }
                                         HorizontalBox { alignment: center; padding: 0; Text { text: "Forward"; color: is_dark ? #ffffff : #323130; font-size: 13px; font-weight: 600; vertical-alignment: center; } }
                                     }
+                                    
+                                    // Reply with AI Button
+                                    Rectangle {
+                                        width: 125px;
+                                        height: 36px;
+                                        border-radius: 4px;
+                                        background: is_dark ? #3d2a5a : #f4e8ff;
+                                        border-width: 1px;
+                                        border-color: is_dark ? #533e7b : #dcbdfc;
+                                        TouchArea {
+                                            mouse-cursor: pointer;
+                                            clicked => {
+                                                compose_to = active_email_sender;
+                                                compose_subject = "Re: " + active_email_subject;
+                                                compose_body = "✨ Drafting AI response...\n\n--- Original Message ---\nFrom: " + active_email_sender + "\nSubject: " + active_email_subject + "\n\n" + active_email_body;
+                                                show_compose_dialog = true;
+                                                generate_ai_reply(active_email_sender, active_email_subject, active_email_body);
+                                            }
+                                        }
+                                        HorizontalBox {
+                                            alignment: center;
+                                            spacing: 6px;
+                                            padding: 0;
+                                            Text { text: "✨"; font-size: 14px; vertical-alignment: center; }
+                                            Text { text: "Reply w/ AI"; color: is_dark ? #e4ccff : #5c2e91; font-size: 13px; font-weight: 600; vertical-alignment: center; }
+                                        }
+                                    }
 
                                     // Ask Tejas Modal
                                     Rectangle {
@@ -393,9 +421,8 @@ export component AppWindow inherits Window {
                                 }
                             }
                         }
-                        
                         // Body Area
-                        Rectangle {
+                        if !show_compose_dialog : Rectangle {
                             background: is_dark ? #1a1a1a : #ffffff;
                             vertical-stretch: 1;
                             
@@ -408,6 +435,78 @@ export component AppWindow inherits Window {
                                         font-size: 15px;
                                         wrap: word-wrap;
                                     }
+                                }
+                            }
+                        }
+
+                        // Outlook Inline Compose Block
+                        if show_compose_dialog : Rectangle {
+                            background: is_dark ? #1a1a1a : #ffffff;
+                            vertical-stretch: 1; // Take up full pane height
+                            
+                            VerticalBox {
+                                padding: 0;
+                                spacing: 0;
+                                
+                                // Compose Header Toolbar
+                                Rectangle {
+                                    height: 50px;
+                                    background: is_dark ? #1a1a1a : #ffffff;
+                                    border-width: 1px;
+                                    border-color: is_dark ? #333333 : #e1dfdd;
+                                    
+                                    HorizontalBox {
+                                        padding-left: 20px; padding-right: 20px; alignment: space-between;
+                                        
+                                        // Left side: Send button and From
+                                        HorizontalBox {
+                                            spacing: 15px;
+                                            Rectangle {
+                                                width: 80px; height: 32px; background: #0078d4; border-radius: 4px;
+                                                TouchArea {
+                                                    mouse-cursor: pointer;
+                                                    clicked => { send_email(compose_to, compose_subject, compose_body); }
+                                                }
+                                                HorizontalBox { alignment: center; padding: 0; Text { text: "Send ➤"; color: #ffffff; font-size: 13px; font-weight: 600; vertical-alignment: center; } }
+                                            }
+                                            Text { text: "From: " + active_email_sender; color: is_dark ? #ffffff : #323130; font-size: 13px; vertical-alignment: center; }
+                                        }
+                                        
+                                        // Right side: Discard (Trash)
+                                        Rectangle {
+                                            width: 32px; height: 32px;
+                                            TouchArea { mouse-cursor: pointer; clicked => { show_compose_dialog = false; } }
+                                            Text { text: "🗑"; color: is_dark ? #bbbbbb : #605e5c; font-size: 16px; horizontal-alignment: center; vertical-alignment: center; }
+                                        }
+                                    }
+                                }
+                                
+                                // Compose Body Area
+                                VerticalBox {
+                                    padding: 20px; spacing: 0;
+                                    
+                                    // To Field
+                                    HorizontalBox {
+                                        padding-bottom: 10px; spacing: 15px; alignment: start;
+                                        Rectangle {
+                                            width: 50px; height: 26px; border-width: 1px; border-color: is_dark ? #444444 : #e1dfdd; border-radius: 2px;
+                                            Text { text: "To"; color: is_dark ? #ffffff : #323130; horizontal-alignment: center; vertical-alignment: center; font-size: 12px; }
+                                        }
+                                        TextInput { text <=> compose_to; color: is_dark ? #ffffff : #323130; font-size: 14px; vertical-alignment: center; single-line: true; horizontal-stretch: 1; }
+                                    }
+                                    
+                                    Rectangle { height: 1px; background: is_dark ? #333333 : #e1dfdd; }
+                                    Rectangle { height: 15px; }
+                                    
+                                    // Subject Field
+                                    TextInput { text <=> compose_subject; color: is_dark ? #ffffff : #323130; font-size: 16px; font-weight: 600; single-line: true; }
+                                    Rectangle { height: 15px; }
+                                    
+                                    Rectangle { height: 1px; background: is_dark ? #333333 : #e1dfdd; }
+                                    Rectangle { height: 20px; }
+                                    
+                                    // Editor Body
+                                    TextInput { text <=> compose_body; color: is_dark ? #ffffff : #323130; font-size: 14px; wrap: word-wrap; vertical-stretch: 1; }
                                 }
                             }
                         }
@@ -813,149 +912,6 @@ export component AppWindow inherits Window {
         }
 
         // Welcome Screen removed to bypass login
-    }
-
-    // Compose Email Dialog Overlay
-    if show_compose_dialog : Rectangle {
-        background: is_dark ? #000000dd : #00000088;
-        TouchArea { } // Eat clicks outside the dialog
-        
-        Rectangle {
-            width: 700px;
-            height: 600px;
-            background: is_dark ? #252525 : #ffffff;
-            border-radius: 8px;
-            border-width: 1px;
-            border-color: is_dark ? #333333 : #e1dfdd;
-            
-            VerticalBox {
-                padding: 0;
-                spacing: 0;
-                
-                // Header
-                Rectangle {
-                    height: 50px;
-                    background: is_dark ? #1a1a1a : #f3f2f1;
-                    border-top-left-radius: 8px;
-                    border-top-right-radius: 8px;
-                    
-                    Rectangle {
-                        y: parent.height - 1px;
-                        height: 1px;
-                        background: is_dark ? #333333 : #e1dfdd;
-                    }
-                    
-                    HorizontalBox {
-                        padding-left: 20px;
-                        padding-right: 20px;
-                        alignment: space-between;
-                        
-                        Text { text: "Compose Email"; color: is_dark ? #ffffff : #323130; font-size: 16px; font-weight: 600; vertical-alignment: center; }
-                        
-                        Rectangle {
-                            width: 30px;
-                            height: 30px;
-                            TouchArea { mouse-cursor: pointer; clicked => { show_compose_dialog = false; } }
-                            Text { text: "✕"; color: is_dark ? #ffffff : #323130; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; }
-                        }
-                    }
-                }
-                
-                // Body
-                VerticalBox {
-                    padding: 20px;
-                    spacing: 15px;
-                    
-                    HorizontalBox {
-                        spacing: 15px;
-                        padding: 0;
-                        Text { text: "To:"; color: is_dark ? #bbbbbb : #605e5c; font-size: 14px; vertical-alignment: center; width: 60px; }
-                        Rectangle {
-                            height: 36px;
-                            border-width: 1px;
-                            border-color: is_dark ? #444444 : #e1dfdd;
-                            background: is_dark ? #1a1a1a : #ffffff;
-                            border-radius: 4px;
-                            HorizontalBox {
-                                padding-left: 10px; padding-right: 10px; padding-top: 0; padding-bottom: 0;
-                                TextInput { text <=> compose_to; color: is_dark ? #ffffff : #323130; font-size: 14px; vertical-alignment: center; single-line: true; }
-                            }
-                        }
-                    }
-                    
-                    HorizontalBox {
-                        spacing: 15px;
-                        padding: 0;
-                        Text { text: "Subject:"; color: is_dark ? #bbbbbb : #605e5c; font-size: 14px; vertical-alignment: center; width: 60px; }
-                        Rectangle {
-                            height: 36px;
-                            border-width: 1px;
-                            border-color: is_dark ? #444444 : #e1dfdd;
-                            background: is_dark ? #1a1a1a : #ffffff;
-                            border-radius: 4px;
-                            HorizontalBox {
-                                padding-left: 10px; padding-right: 10px; padding-top: 0; padding-bottom: 0;
-                                TextInput { text <=> compose_subject; color: is_dark ? #ffffff : #323130; font-size: 14px; vertical-alignment: center; single-line: true; }
-                            }
-                        }
-                    }
-                    
-                    Rectangle {
-                        border-width: 1px;
-                        border-color: is_dark ? #444444 : #e1dfdd;
-                        background: is_dark ? #1a1a1a : #ffffff;
-                        border-radius: 4px;
-                        vertical-stretch: 1;
-                        HorizontalBox {
-                            padding: 10px;
-                            TextInput { text <=> compose_body; color: is_dark ? #ffffff : #323130; font-size: 14px; wrap: word-wrap; }
-                        }
-                    }
-                }
-                
-                // Footer
-                Rectangle {
-                    height: 60px;
-                    background: is_dark ? #252525 : #ffffff;
-                    border-bottom-left-radius: 8px;
-                    border-bottom-right-radius: 8px;
-                    
-                    Rectangle {
-                        y: 0;
-                        height: 1px;
-                        background: is_dark ? #333333 : #e1dfdd;
-                    }
-                    
-                    HorizontalBox {
-                        padding-left: 20px;
-                        padding-right: 20px;
-                        alignment: space-between;
-                        
-                        Rectangle {
-                            width: 80px;
-                            height: 36px;
-                            background: transparent;
-                            TouchArea { mouse-cursor: pointer; clicked => { show_compose_dialog = false; } }
-                            HorizontalBox { alignment: center; padding: 0; Text { text: "Discard"; color: #d13438; font-size: 14px; font-weight: 600; vertical-alignment: center; } }
-                        }
-                        
-                        Rectangle {
-                            width: 100px;
-                            height: 36px;
-                            background: #0078d4;
-                            border-radius: 4px;
-                            TouchArea {
-                                mouse-cursor: pointer;
-                                clicked => {
-                                    send_email(compose_to, compose_subject, compose_body);
-                                }
-                            }
-                            HorizontalBox { alignment: center; padding: 0; Text { text: "Send ➤"; color: #ffffff; font-size: 14px; font-weight: 600; vertical-alignment: center; } }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     // Add Account Dialog Overlay (Layered on top of main layout)

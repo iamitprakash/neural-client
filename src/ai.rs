@@ -48,3 +48,25 @@ pub async fn chat_with_emails(question: &str, emails_context: &str) -> Result<St
     let json: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
     Ok(json["response"].as_str().unwrap_or("No response").to_string())
 }
+
+pub async fn generate_reply(email_text: &str) -> Result<String, String> {
+    let client = reqwest::Client::new();
+    let res = client.post("http://localhost:11434/api/generate")
+        .json(&OllamaRequest {
+            model: "llama3.1:latest".to_string(),
+            prompt: format!(
+                "You are an AI assistant tasked with writing a highly professional, concise reply to the following email. \
+                Do not include conversational filler like 'Here is your reply:' or 'Certainly!'. Draft only the final text \
+                of the response suitable for hitting send immediately.\n\nOriginal Email:\n{}",
+                email_text
+            ),
+            stream: false,
+            options: None,
+        })
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let json: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
+    Ok(json["response"].as_str().unwrap_or("No response").to_string())
+}
