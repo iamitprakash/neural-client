@@ -62,8 +62,17 @@ export component AppWindow inherits Window {
     in-out property <string> compose_to: "";
     in-out property <string> compose_subject: "";
     in-out property <string> compose_body: "";
-    callback send_email(string, string, string);
+    in-out property <string> compose_cc: "";
+    in-out property <string> compose_bcc: "";
+    in-out property <bool> show_cc_bcc: false;
+    in-out property <[string]> compose_attachments: [];
+    in-out property <string> compose_error: "";
+    in-out property <string> compose_warning: "";
+    in-out property <bool> force_send: false;
+    callback send_email(string, string, string, string, string, [string], bool); // to, cc, bcc, subject, body, attachments, force_send
     callback generate_ai_reply(string, string, string);
+    callback add_attachment();
+    callback remove_attachment(int); // index
 
     // Main Layout Area
     Rectangle {
@@ -98,8 +107,14 @@ export component AppWindow inherits Window {
                             mouse-cursor: pointer;
                             clicked => {
                                 compose_to = "";
+                                compose_cc = "";
+                                compose_bcc = "";
                                 compose_subject = "";
                                 compose_body = "";
+                                compose_error = "";
+                                compose_warning = "";
+                                force_send = false;
+                                compose_attachments = [];
                                 show_compose_dialog = true;
                             }
                         }
@@ -458,7 +473,7 @@ export component AppWindow inherits Window {
                                     HorizontalLayout {
                                         padding-left: 20px; padding-right: 20px; padding-top: 0; padding-bottom: 0; alignment: space-between;
                                         
-                                        // Left side: Send button and From
+                                        // Left side: Send button, Attach button, and From
                                         HorizontalLayout {
                                             spacing: 15px;
                                             padding: 0;
@@ -466,9 +481,19 @@ export component AppWindow inherits Window {
                                                 width: 80px; height: 32px; background: #0078d4; border-radius: 4px; y: 9px;
                                                 TouchArea {
                                                     mouse-cursor: pointer;
-                                                    clicked => { send_email(compose_to, compose_subject, compose_body); }
+                                                    clicked => { send_email(compose_to, compose_cc, compose_bcc, compose_subject, compose_body, compose_attachments, force_send); }
                                                 }
                                                 Text { text: "Send ➤"; color: #ffffff; font-size: 13px; font-weight: 600; horizontal-alignment: center; vertical-alignment: center; width: 100%; height: 100%; }
+                                            }
+                                            Rectangle {
+                                                width: 80px; height: 32px; background: is_dark ? #333333 : #f3f2f1; border-radius: 4px; y: 9px;
+                                                border-width: 1px;
+                                                border-color: is_dark ? #444444 : #d1d1d1;
+                                                TouchArea {
+                                                    mouse-cursor: pointer;
+                                                    clicked => { add_attachment(); }
+                                                }
+                                                Text { text: "📎 Attach"; color: is_dark ? #ffffff : #323130; font-size: 13px; font-weight: 600; horizontal-alignment: center; vertical-alignment: center; width: 100%; height: 100%; }
                                             }
                                             Text { y: 9px; height: 32px; text: "From: " + active_email_sender; color: is_dark ? #ffffff : #323130; font-size: 13px; vertical-alignment: center; }
                                         }
@@ -486,14 +511,60 @@ export component AppWindow inherits Window {
                                 VerticalBox {
                                     padding: 20px; spacing: 0;
                                     
-                                    // To Field
+                                    if compose_error != "" : HorizontalBox {
+                                        padding-bottom: 10px;
+                                        Text { text: compose_error; color: #d13438; font-size: 13px; font-weight: 600; }
+                                    }
+                                    
+                                    if compose_warning != "" : HorizontalBox {
+                                        padding-bottom: 10px;
+                                        Rectangle {
+                                            padding: 10px; border-radius: 4px; background: is_dark ? #4a3c1f : #fff4ce; border-width: 1px; border-color: is_dark ? #6e550e : #fddb83;
+                                            HorizontalBox {
+                                                alignment: center; spacing: 10px;
+                                                Text { text: "⚠️"; font-size: 16px; vertical-alignment: center; }
+                                                Text { text: compose_warning; color: is_dark ? #fcebb0 : #795e1e; font-size: 13px; font-weight: 600; vertical-alignment: center; }
+                                            }
+                                        }
+                                    }
+                                    
+                                    // To Field with CC/BCC Toggles
                                     HorizontalBox {
-                                        padding-bottom: 10px; spacing: 15px; alignment: start;
+                                        padding-bottom: 10px; spacing: 15px;
                                         Rectangle {
                                             width: 50px; height: 26px; border-width: 1px; border-color: is_dark ? #444444 : #e1dfdd; border-radius: 2px;
                                             Text { text: "To"; color: is_dark ? #ffffff : #323130; horizontal-alignment: center; vertical-alignment: center; font-size: 12px; }
                                         }
                                         TextInput { text <=> compose_to; color: is_dark ? #ffffff : #323130; font-size: 14px; vertical-alignment: center; single-line: true; horizontal-stretch: 1; }
+                                        
+                                        if !show_cc_bcc : TouchArea {
+                                            width: 30px; height: 26px; mouse-cursor: pointer;
+                                            clicked => { show_cc_bcc = true; }
+                                            Text { text: "Cc"; color: #0078d4; font-size: 13px; font-weight: 600; horizontal-alignment: center; vertical-alignment: center; width: 100%; height: 100%; }
+                                        }
+                                        if !show_cc_bcc : TouchArea {
+                                            width: 35px; height: 26px; mouse-cursor: pointer;
+                                            clicked => { show_cc_bcc = true; }
+                                            Text { text: "Bcc"; color: #0078d4; font-size: 13px; font-weight: 600; horizontal-alignment: center; vertical-alignment: center; width: 100%; height: 100%; }
+                                        }
+                                    }
+                                    
+                                    if show_cc_bcc : HorizontalBox {
+                                        padding-bottom: 10px; spacing: 15px;
+                                        Rectangle {
+                                            width: 50px; height: 26px; border-width: 1px; border-color: is_dark ? #444444 : #e1dfdd; border-radius: 2px;
+                                            Text { text: "Cc"; color: is_dark ? #ffffff : #323130; horizontal-alignment: center; vertical-alignment: center; font-size: 12px; }
+                                        }
+                                        TextInput { text <=> compose_cc; color: is_dark ? #ffffff : #323130; font-size: 14px; vertical-alignment: center; single-line: true; horizontal-stretch: 1; }
+                                    }
+                                    
+                                    if show_cc_bcc : HorizontalBox {
+                                        padding-bottom: 10px; spacing: 15px;
+                                        Rectangle {
+                                            width: 50px; height: 26px; border-width: 1px; border-color: is_dark ? #444444 : #e1dfdd; border-radius: 2px;
+                                            Text { text: "Bcc"; color: is_dark ? #ffffff : #323130; horizontal-alignment: center; vertical-alignment: center; font-size: 12px; }
+                                        }
+                                        TextInput { text <=> compose_bcc; color: is_dark ? #ffffff : #323130; font-size: 14px; vertical-alignment: center; single-line: true; horizontal-stretch: 1; }
                                     }
                                     
                                     Rectangle { height: 1px; background: is_dark ? #333333 : #e1dfdd; }
@@ -502,6 +573,25 @@ export component AppWindow inherits Window {
                                     // Subject Field
                                     TextInput { text <=> compose_subject; color: is_dark ? #ffffff : #323130; font-size: 16px; font-weight: 600; single-line: true; }
                                     Rectangle { height: 15px; }
+                                    
+                                    // Attachments Renderer
+                                    if compose_attachments.length > 0 : HorizontalBox {
+                                        padding-bottom: 15px; spacing: 10px; padding-left: 0; alignment: start;
+                                        for filename[idx] in compose_attachments : Rectangle {
+                                            background: is_dark ? #333333 : #f3f2f1;
+                                            border-radius: 14px;
+                                            height: 28px;
+                                            HorizontalBox {
+                                                padding-left: 12px; padding-right: 8px; padding-top: 0; padding-bottom: 0; alignment: center; spacing: 8px;
+                                                Text { text: filename; color: is_dark ? #ffffff : #323130; font-size: 12px; vertical-alignment: center; }
+                                                TouchArea {
+                                                    width: 16px; height: 16px; mouse-cursor: pointer;
+                                                    clicked => { remove_attachment(idx); }
+                                                    Text { text: "✕"; color: is_dark ? #aaaaaa : #666666; font-size: 10px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; width: 100%; height: 100%; }
+                                                }
+                                            }
+                                        }
+                                    }
                                     
                                     Rectangle { height: 1px; background: is_dark ? #333333 : #e1dfdd; }
                                     Rectangle { height: 20px; }

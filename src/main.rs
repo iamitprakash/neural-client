@@ -226,18 +226,129 @@ fn main() -> Result<(), slint::PlatformError> {
     }
 
     let ui_handle_send = ui.as_weak();
-    ui.on_send_email(move |to, subject, body| {
+    ui.on_send_email(move |to, cc, bcc, subject, body, attachments, force_send| {
+        let to_str = to.to_string();
+        let cc_str = cc.to_string();
+        let bcc_str = bcc.to_string();
+        let body_str = body.to_string();
+
+        fn is_valid_email(s: &str) -> bool {
+            let trimmed = s.trim();
+            if trimmed.is_empty() { return true; }
+            trimmed.contains('@') && trimmed.contains('.')
+        }
+
+        if to_str.trim().is_empty() {
+            if let Some(ui) = ui_handle_send.upgrade() {
+                ui.set_compose_error("Please enter a recipient in the 'To' field.".into());
+            }
+            return;
+        }
+
+        if !is_valid_email(&to_str) {
+            if let Some(ui) = ui_handle_send.upgrade() {
+                ui.set_compose_error("Invalid email format in the 'To' field.".into());
+            }
+            return;
+        }
+
+        if !is_valid_email(&cc_str) {
+            if let Some(ui) = ui_handle_send.upgrade() {
+                ui.set_compose_error("Invalid email format in the 'Cc' field.".into());
+            }
+            return;
+        }
+
+        if !is_valid_email(&bcc_str) {
+            if let Some(ui) = ui_handle_send.upgrade() {
+                ui.set_compose_error("Invalid email format in the 'Bcc' field.".into());
+            }
+            return;
+        }
+
+        // --- Heuristic Warning Checks ---
+        if !force_send {
+            // Isolate user draft from previous emails
+            let drafts: Vec<&str> = body_str.split("--- Original Message ---").collect();
+            let user_draft = drafts[0].to_lowercase();
+
+            // 1. Missing Attachment Check
+            let att_keywords = ["attach", "attached", "attachment", "enclosed"];
+            let mut mentions_attachment = false;
+            for kw in att_keywords.iter() {
+                if user_draft.contains(kw) {
+                    mentions_attachment = true;
+                    break;
+                }
+            }
+            if mentions_attachment && attachments.row_count() == 0 {
+                if let Some(ui) = ui_handle_send.upgrade() {
+                    ui.set_compose_warning("It seems you mentioned an attachment but forgot to add one. Click Send again to ignore.".into());
+                    ui.set_force_send(true);
+                }
+                return;
+            }
+
+            // 2. Missing Link Check
+            if user_draft.contains("link") {
+                if !user_draft.contains("http://") && !user_draft.contains("https://") && !user_draft.contains("www.") {
+                    if let Some(ui) = ui_handle_send.upgrade() {
+                        ui.set_compose_warning("It seems you mentioned a link but forgot to include the URL. Click Send again to ignore.".into());
+                        ui.set_force_send(true);
+                    }
+                    return;
+                }
+            }
+        }
+
         println!("====== OUTBOUND EMAIL MOCK ======");
-        println!("TO: {}", to);
+        println!("TO: {}", to_str);
+        println!("CC: {}", cc_str);
+        println!("BCC: {}", bcc_str);
         println!("SUBJECT: {}", subject);
+        println!("ATTACHMENTS: {} files", attachments.row_count());
+        for i in 0..attachments.row_count() {
+            println!(" - {}", attachments.row_data(i).unwrap());
+        }
         println!("------------- BODY --------------");
         println!("{}", body);
         println!("=================================");
         if let Some(ui) = ui_handle_send.upgrade() {
             ui.set_show_compose_dialog(false);
+            ui.set_compose_error("".into());
+            ui.set_compose_warning("".into());
+            ui.set_force_send(false);
             ui.set_compose_to("".into());
+            ui.set_compose_cc("".into());
+            ui.set_compose_bcc("".into());
+            ui.set_show_cc_bcc(false);
             ui.set_compose_subject("".into());
             ui.set_compose_body("".into());
+            
+            // clear attachments
+            let empty: Vec<slint::SharedString> = Vec::new();
+            ui.set_compose_attachments(ModelRc::from(Rc::new(VecModel::from(empty))));
+        }
+    });
+
+    let ui_handle_attachments = ui.as_weak();
+    ui.on_add_attachment(move || {
+        if let Some(ui) = ui_handle_attachments.upgrade() {
+            let mut current: Vec<slint::SharedString> = ui.get_compose_attachments().iter().collect();
+            let mock_filename = format!("document_{}.pdf", current.len() + 1);
+            current.push(mock_filename.into());
+            ui.set_compose_attachments(ModelRc::from(Rc::new(VecModel::from(current))));
+        }
+    });
+
+    let ui_handle_remove = ui.as_weak();
+    ui.on_remove_attachment(move |idx| {
+        if let Some(ui) = ui_handle_remove.upgrade() {
+            let mut current: Vec<slint::SharedString> = ui.get_compose_attachments().iter().collect();
+            if (idx as usize) < current.len() {
+                current.remove(idx as usize);
+                ui.set_compose_attachments(ModelRc::from(Rc::new(VecModel::from(current))));
+            }
         }
     });
 
