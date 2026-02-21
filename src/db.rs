@@ -39,7 +39,49 @@ pub fn init_db() -> Result<()> {
         )",
         [],
     )?;
+
+    // Master Password Table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS security (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )",
+        [],
+    )?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata("neural-mail.db")
+            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?
+            .permissions();
+        perms.set_mode(0o600);
+        std::fs::set_permissions("neural-mail.db", perms)
+            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+    }
+
     Ok(())
+}
+
+pub fn set_master_password(hash: &str) -> Result<()> {
+    let conn = Connection::open("neural-mail.db")?;
+    conn.execute(
+        "INSERT INTO security (key, value) VALUES ('master_password_hash', ?1)
+         ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        params![hash],
+    )?;
+    Ok(())
+}
+
+pub fn get_master_password_hash() -> Result<Option<String>> {
+    let conn = Connection::open("neural-mail.db")?;
+    let mut stmt = conn.prepare("SELECT value FROM security WHERE key = 'master_password_hash'")?;
+    let mut rows = stmt.query([])?;
+    if let Some(row) = rows.next()? {
+        Ok(Some(row.get(0)?))
+    } else {
+        Ok(None)
+    }
 }
 
 pub fn insert_emails(emails: &[DbEmail]) -> Result<()> {

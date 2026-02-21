@@ -10,10 +10,23 @@ use chrono::Timelike;
 use std::rc::Rc;
 use tokio::runtime::Runtime;
 
-use rand::Rng;
-use rand::RngExt; // For random_range, random_bool in 0.10.0
+use rand::RngExt;
+use email_address::EmailAddress;
+use std::env;
+
+fn sanitize_for_prompt(text: &str) -> String {
+    // Basic sanitization to prevent prompt injection
+    // Escape characters that models often use for structure
+    text.replace('{', "(")
+        .replace('}', ")")
+        .replace('[', "(")
+        .replace(']', ")")
+        .replace("---", " - ")
+        .replace("###", " # ")
+}
 
 fn main() -> Result<(), slint::PlatformError> {
+    dotenvy::dotenv().ok();
     let ui = AppWindow::new()?;
     let rt = Runtime::new().unwrap();
     let rt_handle_fetch = rt.handle().clone();
@@ -24,6 +37,12 @@ fn main() -> Result<(), slint::PlatformError> {
     // Initialize both DBs (accounts if we ever use them, and emails)
     let _ = auth::init_db();
     let _ = db::init_db();
+
+    // Check for Master Password
+    match db::get_master_password_hash() {
+        Ok(Some(_)) => ui.set_has_master_password(true),
+        _ => ui.set_has_master_password(false),
+    }
     
     // Generate mock emails ONLY if database is empty
     match db::count_emails() {
@@ -197,9 +216,14 @@ fn main() -> Result<(), slint::PlatformError> {
         ui.set_email_chat_input("".into());
 
         rt_handle_email_chat.spawn(async move {
-            let context_str = format!("From: {}\nSubject: {}\nBody: {}\n", sender, subject, body);
+            let s_sender = sanitize_for_prompt(&sender);
+            let s_subject = sanitize_for_prompt(&subject);
+            let s_body = sanitize_for_prompt(&body);
+            let s_msg = sanitize_for_prompt(&msg_clone);
+
+            let context_str = format!("From: {}\nSubject: {}\nBody: {}\n", s_sender, s_subject, s_body);
             
-            let result = ai::chat_with_emails(&msg_clone, &context_str).await;
+            let result = ai::chat_with_emails(&s_msg, &context_str).await;
             
             slint::invoke_from_event_loop(move || {
                 if let Some(ui) = ui_for_async.upgrade() {
@@ -267,8 +291,11 @@ fn main() -> Result<(), slint::PlatformError> {
         rt_handle_chat.spawn(async move {
             let mut context_str = String::new();
             if let Ok(emails) = db::get_all_emails() {
-                for e in emails.iter().take(100) { // Limit to 100 to avoid breaking limits if 1000 is still too large
-                    context_str.push_str(&format!("From: {}, Subject: {}\nBody: {}\n\n", e.sender, e.subject, e.body));
+                for e in emails.iter().take(100) {
+                    let s_sender = sanitize_for_prompt(&e.sender);
+                    let s_subject = sanitize_for_prompt(&e.subject);
+                    let s_body = sanitize_for_prompt(&e.body);
+                    context_str.push_str(&format!("From: {}, Subject: {}\nBody: {}\n\n", s_sender, s_subject, s_body));
                 }
             } else {
                 context_str = "No emails found in SQLite database.".to_string();
@@ -296,7 +323,7 @@ fn main() -> Result<(), slint::PlatformError> {
         });
     });
 
-    let ui_handle_sidebar = ui.as_weak();
+    let _ui_handle_sidebar = ui.as_weak();
     ui.on_save_sidebar_width(move |width| {
         if let Err(e) = db::save_sidebar_width(width) {
             eprintln!("Failed to save sidebar width: {}", e);
@@ -326,8 +353,8 @@ fn main() -> Result<(), slint::PlatformError> {
 
         fn is_valid_email(s: &str) -> bool {
             let trimmed = s.trim();
-            if trimmed.is_empty() { return true; }
-            trimmed.contains('@') && trimmed.contains('.')
+            if trimmed.is_empty() { return false; } // Security: Empty emails are NOT valid
+            EmailAddress::is_valid(trimmed)
         }
 
         if to_str.trim().is_empty() {
@@ -393,18 +420,23 @@ fn main() -> Result<(), slint::PlatformError> {
             }
         }
 
-        println!("====== OUTBOUND EMAIL MOCK ======");
-        println!("TO: {}", to_str);
-        println!("CC: {}", cc_str);
-        println!("BCC: {}", bcc_str);
-        println!("SUBJECT: {}", subject);
-        println!("ATTACHMENTS: {} files", attachments.row_count());
-        for i in 0..attachments.row_count() {
-            println!(" - {}", attachments.row_data(i).unwrap());
+        if env::var("DEV_MODE").unwrap_or_else(|_| "false".to_string()) == "true" {
+            println!("====== OUTBOUND EMAIL MOCK ======");
+            println!("TO: {}", to_str);
+            println!("CC: {}", cc_str);
+            println!("BCC: {}", bcc_str);
+            println!("SUBJECT: {}", subject);
+            println!("ATTACHMENTS: {} files", attachments.row_count());
+            for i in 0..attachments.row_count() {
+                println!(" - {}", attachments.row_data(i).unwrap());
+            }
+            println!("------------- BODY --------------");
+            println!("{}", body);
+            println!("=================================");
+        } else {
+            // Future: Implement real secure SMTP here
+            eprintln!("Production Mode: Real email sending not yet implemented.");
         }
-        println!("------------- BODY --------------");
-        println!("{}", body);
-        println!("=================================");
         if let Some(ui) = ui_handle_send.upgrade() {
             ui.set_show_compose_dialog(false);
             ui.set_compose_error("".into());
@@ -480,6 +512,41 @@ fn main() -> Result<(), slint::PlatformError> {
                 }
             });
         });
+    });
+
+    let ui_handle_auth = ui.as_weak();
+    ui.on_create_master_password(move |password| {
+        let ui = ui_handle_auth.unwrap();
+        let pass_str = password.to_string();
+        if pass_str.len() < 4 {
+            ui.set_status_message("Password too short (min 4 chars)".into());
+            return;
+        }
+        
+        let hash = bcrypt::hash(pass_str, bcrypt::DEFAULT_COST).unwrap();
+        if let Ok(_) = db::set_master_password(&hash) {
+            ui.set_has_master_password(true);
+            ui.set_is_locked(false);
+            ui.set_password_input("".into());
+            ui.set_status_message("Master password set successfully".into());
+        }
+    });
+
+    let ui_handle_verify = ui.as_weak();
+    ui.on_verify_password(move |password| {
+        let ui = ui_handle_verify.unwrap();
+        match db::get_master_password_hash() {
+            Ok(Some(hash)) => {
+                if bcrypt::verify(password.to_string(), &hash).unwrap_or(false) {
+                    ui.set_is_locked(false);
+                    ui.set_password_input("".into());
+                    ui.set_status_message("Unlocked".into());
+                } else {
+                    ui.set_status_message("Incorrect password".into());
+                }
+            }
+            _ => ui.set_status_message("No master password set".into()),
+        }
     });
 
     ui.run()

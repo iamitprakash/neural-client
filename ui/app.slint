@@ -80,6 +80,13 @@ export component AppWindow inherits Window {
     callback add_attachment();
     callback remove_attachment(int); // index
 
+    // Security
+    in-out property <bool> is_locked: true;
+    in-out property <bool> has_master_password: false;
+    in-out property <string> password_input: "";
+    callback verify_password(string);
+    callback create_master_password(string);
+
     // Main Layout Area
     Rectangle {
         HorizontalBox {
@@ -1143,6 +1150,71 @@ export component AppWindow inherits Window {
                         clicked => {
                             save_account(new_email_address, new_imap_host, new_password, new_imap_port, is_demo_mode);
                             show_account_dialog = false;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Lock Screen Overlay
+        if is_locked : Rectangle {
+            background: is_dark ? #1a1a1a : #f3f2f1;
+            z: 100;
+            
+            VerticalBox {
+                alignment: center;
+                spacing: 20px;
+                padding: 40px;
+                
+                Text {
+                    text: "NEURAL MAIL";
+                    font-size: 24px;
+                    font-weight: 800;
+                    horizontal-alignment: center;
+                    color: #0078d4;
+                }
+                
+                Text {
+                    text: has_master_password ? "Enter Master Password to Unlock" : "Set a Master Password for Secure Access";
+                    font-size: 16px;
+                    horizontal-alignment: center;
+                    color: is_dark ? #ffffff : #323130;
+                }
+                
+                Rectangle {
+                    width: 300px;
+                    height: 40px;
+                    background: is_dark ? #252525 : #ffffff;
+                    border-radius: 4px;
+                    border-width: 1px;
+                    border-color: #0078d4;
+                    
+                    TextInput {
+                        text <=> password_input;
+                        color: is_dark ? #ffffff : #323130;
+                        font-size: 16px;
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                        input-type: password;
+                        accepted => {
+                            if (has_master_password) {
+                                verify_password(self.text);
+                            } else {
+                                create_master_password(self.text);
+                            }
+                        }
+                    }
+                }
+                
+                Button {
+                    text: has_master_password ? "Unlock" : "Set Password";
+                    primary: true;
+                    width: 150px;
+                    clicked => {
+                        if (has_master_password) {
+                            verify_password(password_input);
+                        } else {
+                            create_master_password(password_input);
                         }
                     }
                 }

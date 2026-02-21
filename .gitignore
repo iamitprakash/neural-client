@@ -1,1 +1,8 @@
-/target
+/target/
+/dist/
+*.db
+*.db-journal
+.env
+.DS_Store
+.vscode/
+.idea/
