@@ -590,8 +590,9 @@ export component AppWindow inherits Window {
                                     if compose_warning != "" : HorizontalBox {
                                         padding-bottom: 10px;
                                         Rectangle {
-                                            padding: 10px; border-radius: 4px; background: is_dark ? #4a3c1f : #fff4ce; border-width: 1px; border-color: is_dark ? #6e550e : #fddb83;
+                                            border-radius: 4px; background: is_dark ? #4a3c1f : #fff4ce; border-width: 1px; border-color: is_dark ? #6e550e : #fddb83;
                                             HorizontalBox {
+                                                padding: 10px;
                                                 alignment: center; spacing: 10px;
                                                 Text { text: "⚠️"; font-size: 16px; vertical-alignment: center; }
                                                 Text { text: compose_warning; color: is_dark ? #fcebb0 : #795e1e; font-size: 13px; font-weight: 600; vertical-alignment: center; }
@@ -788,36 +789,35 @@ export component AppWindow inherits Window {
                                     padding: 20px;
                                     spacing: 12px;
                                     alignment: start;
-                                    
-                                        VerticalBox {
-                                            alignment: msg.is_user ? end : start;
-                                            padding: 0;
+                                    for msg in email_chat_history : VerticalBox {
+                                        alignment: msg.is_user ? end : start;
+                                        padding: 0;
+                                        
+                                        Rectangle {
+                                            // User uses Outlook Blue, AI uses Light Gray
+                                            background: msg.is_user ? #0078d4 : (is_dark ? #252525 : #f3f2f1);
+                                            border-radius: 8px;
+                                            border-top-right-radius: msg.is_user ? 0 : 8px;
+                                            border-top-left-radius: msg.is_user ? 8px : 0;
                                             
-                                            Rectangle {
-                                                // User uses Outlook Blue, AI uses Light Gray
-                                                background: msg.is_user ? #0078d4 : (is_dark ? #252525 : #f3f2f1);
-                                                border-radius: 8px;
-                                                border-top-right-radius: msg.is_user ? 0 : 8px;
-                                                border-top-left-radius: msg.is_user ? 8px : 0;
+                                            // Subtle border for AI messages
+                                            border-width: msg.is_user ? 0px : 1px;
+                                            border-color: is_dark ? #333333 : #e1dfdd;
+                                            
+                                            VerticalBox {
+                                                padding: 10px;
+                                                padding-left: 12px;
+                                                padding-right: 12px;
                                                 
-                                                // Subtle border for AI messages
-                                                border-width: msg.is_user ? 0px : 1px;
-                                                border-color: is_dark ? #333333 : #e1dfdd;
-                                                
-                                                VerticalBox {
-                                                    padding: 10px;
-                                                    padding-left: 12px;
-                                                    padding-right: 12px;
-                                                    
-                                                    Text {
-                                                        text: msg.text;
-                                                        color: msg.is_user ? #ffffff : (is_dark ? #ffffff : #323130);
-                                                        font-size: 14px;
-                                                        wrap: word-wrap;
-                                                    }
+                                                Text {
+                                                    text: msg.text;
+                                                    color: msg.is_user ? #ffffff : (is_dark ? #ffffff : #323130);
+                                                    font-size: 14px;
+                                                    wrap: word-wrap;
                                                 }
                                             }
                                         }
+                                    }
                                 }
                             }
                         }
