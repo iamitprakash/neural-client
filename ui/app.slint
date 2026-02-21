@@ -283,15 +283,20 @@ export component AppWindow inherits Window {
                                     border-width: 1px;
                                     border-color: is_dark ? #444444 : #e1dfdd;
                                     
-                                    HorizontalBox {
+                                    HorizontalLayout {
                                         padding-left: 10px; padding-right: 10px; spacing: 8px;
-                                        Text { text: "🔍"; font-size: 14px; vertical-alignment: center; }
+                                        Text { 
+                                            text: "🔍"; 
+                                            font-size: 14px; 
+                                            vertical-alignment: center;
+                                        }
                                         TextInput {
                                             text <=> search_text;
                                             color: is_dark ? #ffffff : #323130;
                                             font-size: 14px;
                                             vertical-alignment: center;
                                             single-line: true;
+                                            horizontal-stretch: 1;
                                             edited => { search_changed(self.text); }
                                         }
                                         if search_text != "" : TouchArea {
@@ -1196,6 +1201,7 @@ export component AppWindow inherits Window {
                         vertical-alignment: center;
                         horizontal-alignment: center;
                         input-type: password;
+                        horizontal-stretch: 1;
                         accepted => {
                             if (has_master_password) {
                                 verify_password(self.text);
