@@ -1,4 +1,5 @@
-use rusqlite::{params, Connection, Result}; // Assuming Email struct is exported/usable here, or we redefine, but Slint generates Email.
+use rusqlite::{params, Connection, Result};
+use tracing::debug;
 
 // We will redefine a basic struct to avoid fighting with Slint's generated Rc/Model types in DB threads
 #[derive(Debug, Clone)]
@@ -234,6 +235,7 @@ pub fn get_sidebar_width() -> Result<f32> {
             return Ok(width);
         }
     }
+    debug!("Using default sidebar width: 570.0");
     // Default width
     Ok(570.0)
 }

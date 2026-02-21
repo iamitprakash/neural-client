@@ -13,6 +13,8 @@ use tokio::runtime::Runtime;
 use rand::RngExt;
 use email_address::EmailAddress;
 use std::env;
+use tracing::{info, error, warn};
+use tracing_subscriber;
 
 fn sanitize_for_prompt(text: &str) -> String {
     // Basic sanitization to prevent prompt injection
@@ -26,7 +28,9 @@ fn sanitize_for_prompt(text: &str) -> String {
 }
 
 fn main() -> Result<(), slint::PlatformError> {
+    tracing_subscriber::fmt::init();
     dotenvy::dotenv().ok();
+    info!("Starting Neural Mail Client...");
     let ui = AppWindow::new()?;
     let rt = Runtime::new().unwrap();
     let rt_handle_fetch = rt.handle().clone();
@@ -326,7 +330,7 @@ fn main() -> Result<(), slint::PlatformError> {
     let _ui_handle_sidebar = ui.as_weak();
     ui.on_save_sidebar_width(move |width| {
         if let Err(e) = db::save_sidebar_width(width) {
-            eprintln!("Failed to save sidebar width: {}", e);
+            error!("Failed to save sidebar width: {}", e);
         }
     });
 
@@ -336,7 +340,7 @@ fn main() -> Result<(), slint::PlatformError> {
     
     ui.on_save_theme_mode(move |mode| {
         if let Err(e) = db::save_theme_mode(mode.as_str()) {
-            eprintln!("Failed to save theme mode: {}", e);
+            error!("Failed to save theme mode: {}", e);
         }
     });
     
@@ -421,21 +425,21 @@ fn main() -> Result<(), slint::PlatformError> {
         }
 
         if env::var("DEV_MODE").unwrap_or_else(|_| "false".to_string()) == "true" {
-            println!("====== OUTBOUND EMAIL MOCK ======");
-            println!("TO: {}", to_str);
-            println!("CC: {}", cc_str);
-            println!("BCC: {}", bcc_str);
-            println!("SUBJECT: {}", subject);
-            println!("ATTACHMENTS: {} files", attachments.row_count());
+            info!("====== OUTBOUND EMAIL MOCK ======");
+            info!("TO: {}", to_str);
+            info!("CC: {}", cc_str);
+            info!("BCC: {}", bcc_str);
+            info!("SUBJECT: {}", subject);
+            info!("ATTACHMENTS: {} files", attachments.row_count());
             for i in 0..attachments.row_count() {
-                println!(" - {}", attachments.row_data(i).unwrap());
+                info!(" - {}", attachments.row_data(i).unwrap());
             }
-            println!("------------- BODY --------------");
-            println!("{}", body);
-            println!("=================================");
+            info!("------------- BODY --------------");
+            info!("{}", body);
+            info!("=================================");
         } else {
             // Future: Implement real secure SMTP here
-            eprintln!("Production Mode: Real email sending not yet implemented.");
+            warn!("Production Mode: Real email sending not yet implemented.");
         }
         if let Some(ui) = ui_handle_send.upgrade() {
             ui.set_show_compose_dialog(false);

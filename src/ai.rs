@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use reqwest;
 use std::env;
+use tracing::{debug, warn, error};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct OllamaOptions {
@@ -23,20 +24,29 @@ async fn post_to_ollama(request: OllamaRequest) -> Result<String, String> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(60))
         .build()
-        .map_err(|e| format!("Failed to create client: {}", e))?;
+        .map_err(|e| {
+            error!("Failed to create reqwest client: {}", e);
+            format!("Failed to create client: {}", e)
+        })?;
 
     let mut last_error = String::new();
     for attempt in 1..=3 {
+        debug!("Ollama request attempt {} to {}", attempt, endpoint);
         match client.post(&endpoint)
             .json(&request)
             .send()
             .await 
         {
             Ok(res) => {
-                let json: serde_json::Value = res.json().await.map_err(|e| format!("Invalid JSON response: {}", e))?;
+                let json: serde_json::Value = res.json().await.map_err(|e| {
+                    error!("Ollama JSON parse error: {}", e);
+                    format!("Invalid JSON response: {}", e)
+                })?;
+                debug!("Ollama request successful");
                 return Ok(json["response"].as_str().unwrap_or("No response").to_string());
             }
             Err(e) => {
+                warn!("Ollama request attempt {} failed: {}", attempt, e);
                 last_error = format!("Attempt {}: {}", attempt, e);
                 if attempt < 3 {
                     tokio::time::sleep(std::time::Duration::from_millis(500 * attempt)).await;
@@ -44,6 +54,7 @@ async fn post_to_ollama(request: OllamaRequest) -> Result<String, String> {
             }
         }
     }
+    error!("Ollama request failed after 3 attempts: {}", last_error);
     Err(format!("AI Service unavailable after 3 attempts. Last error: {}", last_error))
 }
 
